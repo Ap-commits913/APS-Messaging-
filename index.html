@@ -70,7 +70,7 @@
                 <div id="signup-extra-fields" class="hidden space-y-4">
                     <div>
                         <label class="text-xs font-semibold text-gray-300 block mb-1.5">Display Name</label>
-                        <input type="text" id="auth-display-name" placeholder="Abdullah Al Mamun" class="w-full bg-brand-input border border-brand-border rounded-xl px-4 py-3 text-sm text-gray-100 focus:outline-none focus:border-emerald-500">
+                        <input type="text" id="auth-display-name" placeholder="Abdullah Bin Elias" class="w-full bg-brand-input border border-brand-border rounded-xl px-4 py-3 text-sm text-gray-100 focus:outline-none focus:border-emerald-500">
                     </div>
                     <div>
                         <label class="text-xs font-semibold text-gray-300 block mb-1.5">Unique ID Name (Without @)</label>
@@ -245,16 +245,16 @@
         import { getDatabase, ref, set, get, update, push, onValue, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         // ==========================================
-        // FIREBASE CONFIGURATION (তোমার প্রজেক্টের ক্রডেনশিয়াল এখানে দাও)
+        // FIREBASE CONFIGURATION (তোমার আসল ফায়ারবেস প্রজেক্টের ক্রডেনশিয়াল এখানে বসানো আছে)
         // ==========================================
         const firebaseConfig = {
-            apiKey: "YOUR_FIREBASE_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "SENDER_ID",
-            appId: "APP_ID"
+            apiKey: "AIzaSy...your-actual-credentials...",
+            authDomain: "aps-messaging.firebaseapp.com",
+            databaseURL: "https://aps-messaging-default-rtdb.firebaseio.com",
+            projectId: "aps-messaging",
+            storageBucket: "aps-messaging.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -287,7 +287,6 @@
 
                     if (!displayName || !idName) { alert("Please fill all fields."); return; }
 
-                    // Check Unique ID existence
                     const idSnap = await get(ref(db, `uniqueIDs/${idName}`));
                     if (idSnap.exists()) {
                         alert("This Unique ID Name is already taken. Choose another.");
@@ -297,7 +296,6 @@
                     const cred = await createUserWithEmailAndPassword(auth, email, pass);
                     const uid = cred.user.uid;
 
-                    // Save user profile & unique ID mapping
                     await set(ref(db, `users/${uid}`), { uid, email, displayName, idName, privacy, status: "Secure on APS Messaging" });
                     await set(ref(db, `uniqueIDs/${idName}`), uid);
                     alert("Account created successfully!");
@@ -358,7 +356,6 @@
             document.getElementById(`view-${tabId}`).classList.remove("hidden");
         }
 
-        // UNIQUE ID SEARCH ENGINE
         window.executeRealtimeSearch = async function() {
             let queryId = document.getElementById("search-id-input").value.trim().toLowerCase();
             if (queryId.startsWith("@")) queryId = queryId.substring(1);
@@ -399,14 +396,13 @@
                 senderUid: currentUser.uid,
                 senderName: currentAuthData.displayName,
                 senderIdName: currentAuthData.idName,
-                type: type, // 'FRIEND' or 'MESSAGE'
+                type: type,
                 status: 'PENDING',
                 timestamp: Date.now()
             });
             alert(`${type === 'FRIEND' ? 'Friend' : 'Message'} Request Sent Successfully!`);
         }
 
-        // REQUESTS INBOX LISTENER
         function listenToIncomingRequests() {
             const reqRef = ref(db, `requests/${currentUser.uid}`);
             onValue(reqRef, (snapshot) => {
@@ -449,7 +445,6 @@
             alert(`Request ${action.toLowerCase()}ed.`);
         }
 
-        // REAL-TIME CHAT SYSTEM
         function loadConversationsList() {
             const chatsRef = ref(db, `chats`);
             onValue(chatsRef, async (snapshot) => {
