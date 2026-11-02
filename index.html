@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APS Messaging — Secure Unique ID Messenger</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            dark: '#0b131a',
+                            panel: '#111b21',
+                            card: '#182229',
+                            input: '#202c33',
+                            hover: '#2a3942',
+                            border: '#222d34'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome & Google Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0b131a; color: #e9edef; overflow: hidden; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #374248; border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4a555c; }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col overflow-hidden select-none">
+
+    <!-- AUTHENTICATION / ONBOARDING SCREEN -->
+    <div id="auth-screen" class="fixed inset-0 z-50 bg-brand-dark flex items-center justify-center p-4">
+        <div class="bg-brand-panel max-w-md w-full p-8 rounded-3xl border border-brand-border shadow-2xl space-y-6">
+            <div class="text-center space-y-2">
+                <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white mx-auto shadow-lg shadow-brand-600/20">
+                    <i class="fa-solid fa-shield-halved text-2xl"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-100 tracking-tight">APS Messaging</h1>
+                <p class="text-xs text-gray-400">Secure Unique ID-Based Encrypted Messenger</p>
+            </div>
+
+            <div class="space-y-4" id="auth-form-container">
+                <div>
+                    <label class="text-xs font-semibold text-gray-300 block mb-1.5">Email Address</label>
+                    <input type="email" id="auth-email" placeholder="name@example.com" class="w-full bg-brand-input border border-brand-border rounded-xl px-4 py-3 text-sm text-gray-100 focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-gray-300 block mb-1.5">Secure Password</label>
+                    <input type="password" id="auth-password" placeholder="••••••••" class="w-full bg-brand-input border border-brand-border rounded-xl px-4 py-3 text-sm text-gray-100 focus:outline-none focus:border-emerald-500">
+                </div>
+                
+                <div id="signup-extra-fields" class="hidden space-y-4">
+                    <div>
+                        <label class="text-xs font-semibold text-gray-300 block mb-1.5">Display Name</label>
+                        <input type="text" id="auth-display-name" placeholder="Abdullah Al Mamun" class="w-full bg-brand-input border border-brand-border rounded-xl px-4 py-3 text-sm text-gray-100 focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-300 block mb-1.5">Unique ID Name (Without @)</label>
+                        <input type="text" id="auth-id-name" placeholder="abdullah_pro" class="w-full bg-brand-input border border-brand-border rounded-xl px-4 py-3 text-sm text-gray-100 focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-300 block mb-1.5">Account Privacy Type</label>
+                        <select id="auth-privacy-type" class="w-full bg-brand-input border border-brand-border rounded-xl px-4 py-3 text-sm text-gray-100 focus:outline-none focus:border-emerald-500">
+                            <option value="PUBLIC">PUBLIC (Allows direct Friend Requests)</option>
+                            <option value="PRIVATE">PRIVATE (Requires 1-Time Message Requests)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button onclick="handleAuthAction()" id="auth-action-btn" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-emerald-600/20">
+                    Sign In
+                </button>
+
+                <div class="text-center">
+                    <button onclick="toggleAuthMode()" id="auth-toggle-mode-btn" class="text-xs text-emerald-400 hover:underline">
+                        Don't have an account? Create one
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOP GLOBAL HEADER BAR -->
+    <header class="h-16 bg-brand-panel border-b border-brand-border px-4 sm:px-6 flex items-center justify-between z-40 relative">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white shadow-lg shadow-brand-600/20">
+                <i class="fa-solid fa-shield-halved text-lg"></i>
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="font-bold text-base text-gray-100 tracking-tight">APS Messaging</h1>
+                    <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">ID-Only Realtime</span>
+                </div>
+                <p class="text-[11px] text-gray-400 flex items-center gap-1.5">
+                    <i class="fa-solid fa-lock text-emerald-400 text-[10px]"></i> End-to-End Encrypted • Firebase Online
+                </p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <button onclick="toggleMyPrivacyMode()" id="header-privacy-badge" class="px-3 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-2 border">
+                Loading...
+            </button>
+            <button onclick="logoutUser()" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-all">
+                <i class="fa-solid fa-right-from-bracket mr-1"></i> Logout
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN APP WRAPPER -->
+    <div class="flex flex-1 overflow-hidden relative">
+        <nav class="w-16 sm:w-20 bg-brand-panel border-r border-brand-border flex flex-col items-center py-5 justify-between z-30">
+            <div class="flex flex-col gap-5 items-center w-full">
+                <button onclick="setActiveTab('search')" id="nav-search" class="nav-btn p-3 rounded-2xl text-gray-400 hover:text-emerald-400 hover:bg-brand-hover/50 transition-all relative group" title="Discover Users">
+                    <i class="fa-solid fa-magnifying-glass text-lg group-hover:scale-110 transition-transform"></i>
+                    <span class="text-[9px] block text-center mt-1 font-medium">Find ID</span>
+                </button>
+                <button onclick="setActiveTab('requests')" id="nav-requests" class="nav-btn p-3 rounded-2xl text-gray-400 hover:text-emerald-400 hover:bg-brand-hover/50 transition-all relative group" title="Requests">
+                    <div class="relative">
+                        <i class="fa-solid fa-user-clock text-lg group-hover:scale-110 transition-transform"></i>
+                        <span id="requests-counter-badge" class="hidden absolute -top-2 -right-2 bg-emerald-500 text-gray-950 text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">0</span>
+                    </div>
+                    <span class="text-[9px] block text-center mt-1 font-medium">Requests</span>
+                </button>
+                <button onclick="setActiveTab('chats')" id="nav-chats" class="nav-btn p-3 rounded-2xl text-gray-400 hover:text-emerald-400 hover:bg-brand-hover/50 transition-all relative group" title="Chats">
+                    <i class="fa-solid fa-comment-dots text-lg group-hover:scale-110 transition-transform"></i>
+                    <span class="text-[9px] block text-center mt-1 font-medium">Chats</span>
+                </button>
+            </div>
+            <div id="my-nav-avatar" class="w-10 h-10 rounded-xl bg-brand-input border border-brand-border flex items-center justify-center font-bold text-emerald-400 text-sm">
+                APS
+            </div>
+        </nav>
+
+        <main class="flex-1 bg-brand-dark flex overflow-hidden relative">
+
+            <!-- 1. SEARCH VIEW -->
+            <section id="view-search" class="view-panel hidden w-full h-full p-6 overflow-y-auto max-w-4xl mx-auto space-y-6">
+                <div class="bg-brand-panel p-6 rounded-3xl border border-brand-border shadow-xl">
+                    <div class="mb-5">
+                        <h2 class="text-xl font-bold text-gray-100 flex items-center gap-2">
+                            <i class="fa-solid fa-id-badge text-emerald-400"></i> Unique ID Search Engine
+                        </h2>
+                        <p class="text-xs text-gray-400 mt-1">Search live users across the database using their Unique ID Name.</p>
+                    </div>
+                    <div class="relative">
+                        <input type="text" id="search-id-input" placeholder="Enter Unique ID (e.g. abdullah_pro)..."
+                            onkeyup="if(event.key==='Enter') executeRealtimeSearch()"
+                            class="w-full bg-brand-input border border-brand-border rounded-2xl px-5 py-4 pl-12 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-emerald-500">
+                        <i class="fa-solid fa-at absolute left-4 top-4.5 text-emerald-400 text-lg"></i>
+                        <button onclick="executeRealtimeSearch()" class="absolute right-2.5 top-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs px-5 py-2.5 rounded-xl transition-all shadow-md">
+                            Search
+                        </button>
+                    </div>
+                </div>
+
+                <div id="search-result-card" class="hidden">
+                    <div class="bg-brand-panel p-6 rounded-3xl border border-brand-border shadow-2xl relative overflow-hidden">
+                        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                            <div class="flex items-center gap-5">
+                                <div class="w-20 h-20 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/40 flex items-center justify-center font-bold text-2xl text-emerald-400" id="sr-avatar-text">U</div>
+                                <div>
+                                    <h3 id="sr-name" class="text-xl font-bold text-gray-100">---</h3>
+                                    <span id="sr-id" class="text-xs font-semibold text-emerald-400">@---</span>
+                                    <p id="sr-privacy" class="text-xs text-gray-400 mt-1 uppercase font-medium">---</p>
+                                </div>
+                            </div>
+                            <div id="sr-action-container"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. REQUESTS VIEW -->
+            <section id="view-requests" class="view-panel hidden w-full h-full p-6 overflow-y-auto max-w-4xl mx-auto space-y-6">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-100 flex items-center gap-2">
+                        <i class="fa-solid fa-inbox text-emerald-400"></i> Permission Requests Inbox
+                    </h2>
+                    <p class="text-xs text-gray-400 mt-0.5">Manage live Friend and Message Requests.</p>
+                </div>
+                <div id="requests-feed" class="space-y-4"></div>
+            </section>
+
+            <!-- 3. CHATS VIEW -->
+            <section id="view-chats" class="view-panel flex w-full h-full overflow-hidden">
+                <div class="w-full sm:w-80 lg:w-96 bg-brand-panel border-r border-brand-border flex flex-col h-full flex-shrink-0">
+                    <div class="p-4 border-b border-brand-border flex items-center justify-between">
+                        <h3 class="font-bold text-sm text-gray-200 uppercase tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-message text-emerald-400"></i> Conversations
+                        </h3>
+                    </div>
+                    <div id="chat-channels-list" class="flex-1 overflow-y-auto divide-y divide-brand-border/40"></div>
+                </div>
+
+                <div id="chat-workspace" class="hidden sm:flex flex-1 flex-col h-full bg-brand-dark relative overflow-hidden">
+                    <div class="h-16 px-4 bg-brand-panel border-b border-brand-border flex items-center justify-between z-10">
+                        <h4 id="cw-target-name" class="font-bold text-sm text-gray-100">Select Chat</h4>
+                        <span id="cw-target-status" class="text-xs text-emerald-400 font-semibold">Active Secure Channel</span>
+                    </div>
+
+                    <div id="messages-scroll-area" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
+
+                    <div class="p-3 bg-brand-panel border-t border-brand-border flex items-center gap-2">
+                        <input type="text" id="chat-message-input" placeholder="Type encrypted message..."
+                            onkeypress="if(event.key==='Enter') sendRealtimeMessage()"
+                            class="flex-1 bg-brand-input border border-brand-border rounded-xl px-4 py-3 text-sm text-gray-100 focus:outline-none focus:border-emerald-500">
+                        <button onclick="sendRealtimeMessage()" class="w-10 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center font-bold shadow-md">
+                            <i class="fa-solid fa-paper-plane text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="chat-empty-placeholder" class="hidden sm:flex flex-1 flex-col items-center justify-center text-center p-6 text-gray-500">
+                    <i class="fa-solid fa-shield-cat text-4xl text-emerald-400 mb-3"></i>
+                    <h3 class="text-base font-bold text-gray-200">No Chat Selected</h3>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- FIREBASE SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getDatabase, ref, set, get, update, push, onValue, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        // ==========================================
+        // FIREBASE CONFIGURATION (তোমার প্রজেক্টের ক্রডেনশিয়াল এখানে দাও)
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "YOUR_FIREBASE_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "SENDER_ID",
+            appId: "APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        let currentUser = null;
+        let currentAuthData = null;
+        let activeChatUserId = null;
+        let isSignUp = false;
+
+        window.toggleAuthMode = function() {
+            isSignUp = !isSignUp;
+            document.getElementById("signup-extra-fields").classList.toggle("hidden", !isSignUp);
+            document.getElementById("auth-action-btn").innerText = isSignUp ? "Create Secure Account" : "Sign In";
+            document.getElementById("auth-toggle-mode-btn").innerText = isSignUp ? "Already have an account? Sign In" : "Don't have an account? Create one";
+        }
+
+        window.handleAuthAction = async function() {
+            const email = document.getElementById("auth-email").value.trim();
+            const pass = document.getElementById("auth-password").value.trim();
+
+            if (!email || !pass) { alert("Please enter email and password."); return; }
+
+            try {
+                if (isSignUp) {
+                    const displayName = document.getElementById("auth-display-name").value.trim();
+                    let idName = document.getElementById("auth-id-name").value.trim().toLowerCase();
+                    const privacy = document.getElementById("auth-privacy-type").value;
+
+                    if (!displayName || !idName) { alert("Please fill all fields."); return; }
+
+                    // Check Unique ID existence
+                    const idSnap = await get(ref(db, `uniqueIDs/${idName}`));
+                    if (idSnap.exists()) {
+                        alert("This Unique ID Name is already taken. Choose another.");
+                        return;
+                    }
+
+                    const cred = await createUserWithEmailAndPassword(auth, email, pass);
+                    const uid = cred.user.uid;
+
+                    // Save user profile & unique ID mapping
+                    await set(ref(db, `users/${uid}`), { uid, email, displayName, idName, privacy, status: "Secure on APS Messaging" });
+                    await set(ref(db, `uniqueIDs/${idName}`), uid);
+                    alert("Account created successfully!");
+                } else {
+                    await signInWithEmailAndPassword(auth, email, pass);
+                }
+            } catch (err) {
+                alert("Authentication Error: " + err.message);
+            }
+        }
+
+        window.logoutUser = function() { signOut(auth); }
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById("auth-screen").classList.add("hidden");
+                const snap = await get(ref(db, `users/${user.uid}`));
+                if (snap.exists()) {
+                    currentAuthData = snap.val();
+                    initAppUI();
+                }
+            } else {
+                currentUser = null;
+                currentAuthData = null;
+                document.getElementById("auth-screen").classList.remove("hidden");
+            }
+        });
+
+        function initAppUI() {
+            document.getElementById("my-nav-avatar").innerText = currentAuthData.displayName.charAt(0).toUpperCase();
+            updatePrivacyBadge();
+            setActiveTab('search');
+            listenToIncomingRequests();
+            loadConversationsList();
+        }
+
+        window.toggleMyPrivacyMode = async function() {
+            const newPrivacy = currentAuthData.privacy === "PUBLIC" ? "PRIVATE" : "PUBLIC";
+            await update(ref(db, `users/${currentUser.uid}`), { privacy: newPrivacy });
+            currentAuthData.privacy = newPrivacy;
+            updatePrivacyBadge();
+        }
+
+        function updatePrivacyBadge() {
+            const btn = document.getElementById("header-privacy-badge");
+            if (currentAuthData.privacy === "PUBLIC") {
+                btn.className = "px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-2";
+                btn.innerHTML = `<i class="fa-solid fa-globe"></i> Public Account`;
+            } else {
+                btn.className = "px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-2";
+                btn.innerHTML = `<i class="fa-solid fa-lock"></i> Private Account`;
+            }
+        }
+
+        window.setActiveTab = function(tabId) {
+            document.querySelectorAll(".view-panel").forEach(p => p.classList.add("hidden"));
+            document.getElementById(`view-${tabId}`).classList.remove("hidden");
+        }
+
+        // UNIQUE ID SEARCH ENGINE
+        window.executeRealtimeSearch = async function() {
+            let queryId = document.getElementById("search-id-input").value.trim().toLowerCase();
+            if (queryId.startsWith("@")) queryId = queryId.substring(1);
+
+            const card = document.getElementById("search-result-card");
+            if (!queryId || queryId === currentAuthData.idName) { card.classList.add("hidden"); return; }
+
+            const idSnap = await get(ref(db, `uniqueIDs/${queryId}`));
+            if (!idSnap.exists()) {
+                alert("User not found with this Unique ID.");
+                card.classList.add("hidden");
+                return;
+            }
+
+            const targetUid = idSnap.val();
+            const targetSnap = await get(ref(db, `users/${targetUid}`));
+            const targetUser = targetSnap.val();
+
+            card.classList.remove("hidden");
+            document.getElementById("sr-avatar-text").innerText = targetUser.displayName.charAt(0);
+            document.getElementById("sr-name").innerText = targetUser.displayName;
+            document.getElementById("sr-id").innerText = `@${targetUser.idName}`;
+            document.getElementById("sr-privacy").innerText = `${targetUser.privacy} ACCOUNT`;
+
+            const actionContainer = document.getElementById("sr-action-container");
+            actionContainer.innerHTML = "";
+
+            if (targetUser.privacy === "PUBLIC") {
+                actionContainer.innerHTML = `<button onclick="sendRequest('${targetUid}', 'FRIEND')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-md"><i class="fa-solid fa-user-plus mr-1"></i> Send Friend Request</button>`;
+            } else {
+                actionContainer.innerHTML = `<button onclick="sendRequest('${targetUid}', 'MESSAGE')" class="bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-md"><i class="fa-solid fa-paper-plane mr-1"></i> Send Message Request</button>`;
+            }
+        }
+
+        window.sendRequest = async function(targetUid, type) {
+            const reqRef = push(ref(db, `requests/${targetUid}`));
+            await set(reqRef, {
+                senderUid: currentUser.uid,
+                senderName: currentAuthData.displayName,
+                senderIdName: currentAuthData.idName,
+                type: type, // 'FRIEND' or 'MESSAGE'
+                status: 'PENDING',
+                timestamp: Date.now()
+            });
+            alert(`${type === 'FRIEND' ? 'Friend' : 'Message'} Request Sent Successfully!`);
+        }
+
+        // REQUESTS INBOX LISTENER
+        function listenToIncomingRequests() {
+            const reqRef = ref(db, `requests/${currentUser.uid}`);
+            onValue(reqRef, (snapshot) => {
+                const feed = document.getElementById("requests-feed");
+                feed.innerHTML = "";
+                let count = 0;
+
+                if (snapshot.exists()) {
+                    snapshot.forEach((childSnap) => {
+                        const reqKey = childSnap.key;
+                        const req = childSnap.val();
+                        if (req.status === 'PENDING') {
+                            count++;
+                            feed.innerHTML += `
+                                <div class="bg-brand-panel p-5 rounded-2xl flex items-center justify-between border border-brand-border">
+                                    <div>
+                                        <h4 class="font-bold text-sm text-gray-100">${req.senderName}</h4>
+                                        <p class="text-xs text-emerald-400">@${req.senderIdName} • <span class="uppercase">${req.type} REQUEST</span></p>
+                                    </div>
+                                    <div class="flex items-center gap-2 text-xs font-semibold">
+                                        <button onclick="respondRequest('${reqKey}', '${req.senderUid}', '${req.type}', 'ACCEPT')" class="bg-emerald-600 text-white px-4 py-2 rounded-xl">Accept</button>
+                                        <button onclick="respondRequest('${reqKey}', '${req.senderUid}', '${req.type}', 'REJECT')" class="bg-brand-input text-rose-400 px-4 py-2 rounded-xl border border-brand-border">Reject</button>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    });
+                }
+                const badge = document.getElementById("requests-counter-badge");
+                if (count > 0) { badge.innerText = count; badge.classList.remove("hidden"); } else { badge.classList.add("hidden"); }
+            });
+        }
+
+        window.respondRequest = async function(reqKey, senderUid, type, action) {
+            await update(ref(db, `requests/${currentUser.uid}/${reqKey}`), { status: action });
+            if (action === 'ACCEPT') {
+                const chatId = [currentUser.uid, senderUid].sort().join("_");
+                await set(ref(db, `chats/${chatId}`), { active: true, type: type });
+            }
+            alert(`Request ${action.toLowerCase()}ed.`);
+        }
+
+        // REAL-TIME CHAT SYSTEM
+        function loadConversationsList() {
+            const chatsRef = ref(db, `chats`);
+            onValue(chatsRef, async (snapshot) => {
+                const list = document.getElementById("chat-channels-list");
+                list.innerHTML = "";
+
+                if (snapshot.exists()) {
+                    snapshot.forEach(async (child) => {
+                        const chatId = child.key;
+                        if (chatId.includes(currentUser.uid)) {
+                            const otherUid = chatId.replace(currentUser.uid, "").replace("_", "");
+                            const userSnap = await get(ref(db, `users/${otherUid}`));
+                            if (userSnap.exists()) {
+                                const otherUser = userSnap.val();
+                                list.innerHTML += `
+                                    <div onclick="openChat('${chatId}', '${otherUid}', '${otherUser.displayName}')" class="p-4 cursor-pointer hover:bg-brand-input flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold">${otherUser.displayName.charAt(0)}</div>
+                                        <div>
+                                            <h4 class="font-bold text-sm text-gray-100">${otherUser.displayName}</h4>
+                                            <p class="text-xs text-gray-400">@${otherUser.idName}</p>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        window.openChat = function(chatId, targetUid, targetName) {
+            activeChatId = chatId;
+            activeChatUserId = targetUid;
+            setActiveTab('chats');
+            document.getElementById("chat-empty-placeholder").classList.add("hidden");
+            document.getElementById("chat-workspace").classList.remove("hidden");
+            document.getElementById("cw-target-name").innerText = targetName;
+            loadMessages(chatId);
+        }
+
+        let activeChatId = null;
+        function loadMessages(chatId) {
+            const msgRef = ref(db, `messages/${chatId}`);
+            onValue(msgRef, (snapshot) => {
+                const area = document.getElementById("messages-scroll-area");
+                area.innerHTML = "";
+                if (snapshot.exists()) {
+                    snapshot.forEach((child) => {
+                        const m = child.val();
+                        const isSent = m.senderUid === currentUser.uid;
+                        area.innerHTML += `
+                            <div class="flex flex-col ${isSent ? 'items-end' : 'items-start'}">
+                                <div class="max-w-[75%] px-4 py-2.5 rounded-2xl text-xs ${isSent ? 'bg-emerald-700 text-white rounded-tr-none' : 'bg-brand-panel border border-brand-border text-gray-100 rounded-tl-none'} shadow">
+                                    <p>${m.text}</p>
+                                    <span class="text-[9px] text-gray-300 mt-1 block">${new Date(m.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    area.scrollTop = area.scrollHeight;
+                }
+            });
+        }
+
+        window.sendRealtimeMessage = async function() {
+            const input = document.getElementById("chat-message-input");
+            const text = input.value.trim();
+            if (!text || !activeChatId) return;
+
+            await push(ref(db, `messages/${activeChatId}`), {
+                senderUid: currentUser.uid,
+                text: text,
+                timestamp: Date.now()
+            });
+            input.value = "";
+        }
+    </script>
+</body>
+</html>
