@@ -46,7 +46,7 @@
 </head>
 <body class="h-screen w-screen flex flex-col overflow-hidden select-none">
 
-    <!-- AUTHENTICATION / ONBOARDING SCREEN -->
+    <!-- AUTHENTICATION SCREEN -->
     <div id="auth-screen" class="fixed inset-0 z-50 bg-brand-dark flex items-center justify-center p-4">
         <div class="bg-brand-panel max-w-md w-full p-8 rounded-3xl border border-brand-border shadow-2xl space-y-6">
             <div class="text-center space-y-2">
@@ -210,10 +210,18 @@
             <!-- 3. CHATS VIEW -->
             <section id="view-chats" class="view-panel flex w-full h-full overflow-hidden">
                 <div class="w-full sm:w-80 lg:w-96 bg-brand-panel border-r border-brand-border flex flex-col h-full flex-shrink-0">
-                    <div class="p-4 border-b border-brand-border flex items-center justify-between">
-                        <h3 class="font-bold text-sm text-gray-200 uppercase tracking-wider flex items-center gap-2">
-                            <i class="fa-solid fa-message text-emerald-400"></i> Conversations
-                        </h3>
+                    <div class="p-4 border-b border-brand-border space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-bold text-sm text-gray-200 uppercase tracking-wider flex items-center gap-2">
+                                <i class="fa-solid fa-message text-emerald-400"></i> Conversations
+                            </h3>
+                        </div>
+                        <!-- Chat List Search Bar -->
+                        <div class="relative">
+                            <input type="text" id="chat-search-input" placeholder="Search chats by name..." onkeyup="filterChatConversations()"
+                                class="w-full bg-brand-input border border-brand-border rounded-xl px-3.5 py-2 pl-9 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-emerald-500">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-gray-400 text-xs"></i>
+                        </div>
                     </div>
                     <div id="chat-channels-list" class="flex-1 overflow-y-auto divide-y divide-brand-border/40"></div>
                 </div>
@@ -234,10 +242,15 @@
                         </div>
                     </div>
 
-                    <div id="messages-scroll-area" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
+                    <div id="messages-scroll-area" class="flex-1 overflow-y-auto p-4 space-y-4 relative"></div>
 
-                    <div class="p-3 bg-brand-panel border-t border-brand-border flex items-center gap-2">
-                        <input type="text" id="chat-message-input" placeholder="Type encrypted message or emoji..."
+                    <!-- Messenger Style Input Bar -->
+                    <div class="p-3 bg-brand-panel border-t border-brand-border flex items-center gap-2 relative">
+                        <!-- Media / Gallery Trigger Button -->
+                        <button onclick="openGalleryDrawer()" class="w-10 h-10 rounded-xl bg-brand-input hover:bg-brand-hover text-emerald-400 flex items-center justify-center cursor-pointer border border-brand-border flex-shrink-0" title="Open Gallery">
+                            <i class="fa-solid fa-image text-sm"></i>
+                        </button>
+                        <input type="text" id="chat-message-input" placeholder="Type a message..."
                             onkeypress="if(event.key==='Enter') sendRealtimeMessage()"
                             class="flex-1 bg-brand-input border border-brand-border rounded-xl px-4 py-3 text-sm text-gray-100 focus:outline-none focus:border-emerald-500">
                         <button onclick="sendRealtimeMessage()" class="w-10 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center font-bold shadow-md flex-shrink-0">
@@ -261,13 +274,16 @@
                     <p class="text-xs text-gray-400 mt-0.5">Manage your personal details, bio, avatar, and blocked users.</p>
                 </div>
 
-                <!-- Personal Info Card -->
                 <div class="bg-brand-panel p-6 rounded-3xl border border-brand-border shadow-xl space-y-6">
                     <div class="flex flex-col sm:flex-row items-center gap-6">
-                        <div class="relative group">
-                            <div id="profile-avatar-box" class="w-24 h-24 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/40 flex items-center justify-center font-bold text-3xl text-emerald-400 overflow-hidden shadow-inner flex-shrink-0">
+                        <div class="relative group cursor-pointer" onclick="triggerProfilePicUpload()" title="Click to change profile picture">
+                            <div id="profile-avatar-box" class="w-24 h-24 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/40 flex items-center justify-center font-bold text-3xl text-emerald-400 overflow-hidden shadow-inner flex-shrink-0 relative">
                                 <span id="profile-avatar-text">U</span>
+                                <div class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-semibold">
+                                    <i class="fa-solid fa-camera mr-1"></i> Change
+                                </div>
                             </div>
+                            <input type="file" id="hidden-avatar-input" accept="image/*" class="hidden" onchange="handleProfilePicSelection(event)">
                         </div>
                         <div class="space-y-1 text-center sm:text-left">
                             <h3 id="profile-display-name" class="text-xl font-bold text-gray-100">---</h3>
@@ -276,28 +292,17 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-brand-border">
-                        <!-- Update Profile Picture URL -->
-                        <div>
-                            <label class="text-xs font-semibold text-gray-300 block mb-1.5">Profile Picture Image URL</label>
-                            <div class="flex gap-2">
-                                <input type="text" id="input-profile-pic" placeholder="https://example.com/avatar.jpg" class="flex-1 bg-brand-input border border-brand-border rounded-xl px-4 py-2.5 text-xs text-gray-100 focus:outline-none focus:border-emerald-500">
-                                <button onclick="updateProfilePic()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition-all">Update</button>
-                            </div>
-                        </div>
-
-                        <!-- Update Bio -->
+                    <div class="grid grid-cols-1 md:grid-cols-1 gap-4 pt-4 border-t border-brand-border">
                         <div>
                             <label class="text-xs font-semibold text-gray-300 block mb-1.5">Bio (Visible based on Privacy)</label>
                             <div class="flex gap-2">
                                 <input type="text" id="input-profile-bio" placeholder="Hey there! I am using APS Messaging." class="flex-1 bg-brand-input border border-brand-border rounded-xl px-4 py-2.5 text-xs text-gray-100 focus:outline-none focus:border-emerald-500">
-                                <button onclick="updateProfileBio()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition-all">Save</button>
+                                <button onclick="updateProfileBio()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl transition-all">Save Bio</button>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Settings: Blocked Accounts Section -->
                 <div class="bg-brand-panel p-6 rounded-3xl border border-brand-border shadow-xl space-y-4">
                     <div>
                         <h3 class="text-base font-bold text-gray-100 flex items-center gap-2">
@@ -314,15 +319,67 @@
         </main>
     </div>
 
+    <!-- MESSENGER STYLE GALLERY DRAWER MODAL -->
+    <div id="gallery-drawer-modal" class="hidden fixed inset-0 z-50 bg-black/70 flex flex-col justify-end">
+        <div class="bg-brand-panel border-t border-brand-border rounded-t-3xl max-h-[85vh] flex flex-col p-4 shadow-2xl animate-in slide-in-from-bottom duration-200">
+            <div class="flex items-center justify-between pb-3 border-b border-brand-border">
+                <div class="flex items-center gap-2">
+                    <h3 class="font-bold text-sm text-gray-100">Select album</h3>
+                    <i class="fa-solid fa-chevron-down text-xs text-gray-400"></i>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-xs font-semibold text-emerald-400 flex items-center gap-1"><i class="fa-solid fa-images"></i> On</span>
+                    <button onclick="closeGalleryDrawer()" class="text-gray-400 hover:text-white p-1.5"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+            </div>
+
+            <!-- Albums / Media Picker Body mimicking device gallery -->
+            <div class="flex-1 overflow-y-auto py-4 space-y-4">
+                <div class="grid grid-cols-2 gap-3" id="album-categories-grid">
+                    <div onclick="triggerDirectDeviceFilePicker()" class="bg-brand-input p-4 rounded-2xl border border-brand-border cursor-pointer hover:border-emerald-500 transition-all flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-lg"><i class="fa-solid fa-images"></i></div>
+                        <div>
+                            <h4 class="font-bold text-xs text-gray-100">All photos & videos</h4>
+                            <p class="text-[10px] text-gray-400">Open device storage</p>
+                        </div>
+                    </div>
+                    <div onclick="triggerDirectDeviceFilePicker()" class="bg-emerald-600/20 p-4 rounded-2xl border border-emerald-500/40 cursor-pointer hover:bg-emerald-600/30 transition-all flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-lg"><i class="fa-solid fa-plus"></i></div>
+                        <div>
+                            <h4 class="font-bold text-xs text-emerald-300">Browse Gallery</h4>
+                            <p class="text-[10px] text-emerald-400">Select media</p>
+                        </div>
+                    </div>
+                </div>
+                <input type="file" id="device-native-file-input" accept="image/*,video/*" class="hidden" onchange="handleNativeFileSelected(event)">
+            </div>
+        </div>
+    </div>
+
+    <!-- MESSAGE REACTION & ACTION SHEET MODAL -->
+    <div id="message-action-modal" class="hidden fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+        <div class="bg-brand-panel max-w-xs w-full p-5 rounded-3xl border border-brand-border shadow-2xl space-y-4 text-center relative">
+            <div class="flex items-center justify-around bg-brand-input p-2.5 rounded-2xl border border-brand-border text-xl">
+                <button onclick="addReactionToActiveMsg('❤️')" class="hover:scale-125 transition-transform">❤️</button>
+                <button onclick="addReactionToActiveMsg('😆')" class="hover:scale-125 transition-transform">😆</button>
+                <button onclick="addReactionToActiveMsg('😮')" class="hover:scale-125 transition-transform">😮</button>
+                <button onclick="addReactionToActiveMsg('😢')" class="hover:scale-125 transition-transform">😢</button>
+                <button onclick="addReactionToActiveMsg('🙏')" class="hover:scale-125 transition-transform">🙏</button>
+                <button onclick="addReactionToActiveMsg('👍')" class="hover:scale-125 transition-transform">👍</button>
+            </div>
+            <div class="space-y-2 text-xs font-semibold">
+                <button onclick="deleteActiveMsg()" class="w-full py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-xl transition-all flex items-center justify-center gap-2"><i class="fa-solid fa-trash"></i> Delete Message</button>
+                <button onclick="closeMessageActionModal()" class="w-full py-2 bg-transparent text-gray-400 hover:text-white transition-all">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- FIREBASE SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getDatabase, ref, set, get, update, remove, push, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-        // ==========================================
-        // FIREBASE CONFIGURATION
-        // ==========================================
         const firebaseConfig = {
           apiKey: "AIzaSyBdLGspLUDEQRRf_Hr8655pJrm889BDr0g",
           authDomain: "ap-chat-live-5f0c9.firebaseapp.com",
@@ -342,7 +399,9 @@
         let currentAuthData = null;
         let activeChatUserId = null;
         let activeChatId = null;
+        let activeSelectedMsgKey = null;
         let isSignUp = false;
+        let globalChatsCache = [];
 
         window.toggleAuthMode = function() {
             isSignUp = !isSignUp;
@@ -355,10 +414,7 @@
             const email = document.getElementById("auth-email").value.trim();
             const pass = document.getElementById("auth-password").value.trim();
 
-            if (!email || !pass) { 
-                alert("দয়া করে ইমেল এবং পাসওয়ার্ড দিন।"); 
-                return; 
-            }
+            if (!email || !pass) { alert("দয়া করে ইমেল এবং পাসওয়ার্ড দিন।"); return; }
 
             try {
                 if (isSignUp) {
@@ -366,15 +422,8 @@
                     let idName = document.getElementById("auth-id-name").value.trim().toLowerCase();
                     const privacy = document.getElementById("auth-privacy-type").value;
 
-                    if (!displayName || !idName) { 
-                        alert("দয়া করে সব ফিল্ড পূরণ করুন।"); 
-                        return; 
-                    }
-
-                    if (pass.length < 6) {
-                        alert("পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।");
-                        return;
-                    }
+                    if (!displayName || !idName) { alert("দয়া করে সব ফিল্ড পূরণ করুন।"); return; }
+                    if (pass.length < 6) { alert("পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।"); return; }
 
                     const idSnap = await get(ref(db, `uniqueIDs/${idName}`));
                     if (idSnap.exists()) {
@@ -384,28 +433,21 @@
 
                     const cred = await createUserWithEmailAndPassword(auth, email, pass);
                     const freshUser = cred.user;
-
                     await freshUser.getIdToken(true);
 
                     await set(ref(db, `users/${freshUser.uid}`), { 
-                        uid: freshUser.uid, 
-                        email: email, 
-                        displayName: displayName, 
-                        idName: idName, 
-                        privacy: privacy, 
-                        bio: "Hey there! I am using APS Messaging.",
-                        profilePic: "",
-                        status: "Secure on APS Messaging" 
+                        uid: freshUser.uid, email: email, displayName: displayName, 
+                        idName: idName, privacy: privacy, bio: "Hey there! I am using APS Messaging.",
+                        profilePic: "", status: "Secure on APS Messaging" 
                     });
                     await set(ref(db, `uniqueIDs/${idName}`), freshUser.uid);
-
                     alert("অ্যাকাউন্ট সফলভাবে তৈরি হয়েছে!");
                 } else {
                     const cred = await signInWithEmailAndPassword(auth, email, pass);
                     await cred.user.getIdToken(true);
                 }
             } catch (err) {
-                console.error("Auth Error Code:", err.code, "Message:", err.message);
+                console.error("Auth Error:", err);
                 alert("অথেন্টিকেশন এরর: " + err.message);
             }
         }
@@ -453,13 +495,12 @@
             document.getElementById("profile-id-name").innerText = `@${currentAuthData.idName}`;
             document.getElementById("profile-email").innerText = currentAuthData.email;
             document.getElementById("input-profile-bio").value = currentAuthData.bio || "";
-            document.getElementById("input-profile-pic").value = currentAuthData.profilePic || "";
 
             const avatarBox = document.getElementById("profile-avatar-box");
             if (currentAuthData.profilePic) {
-                avatarBox.innerHTML = `<img src="${currentAuthData.profilePic}" class="w-full h-full object-cover">`;
+                avatarBox.innerHTML = `<img src="${currentAuthData.profilePic}" class="w-full h-full object-cover"><div class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity text-white text-xs font-semibold"><i class="fa-solid fa-camera mr-1"></i> Change</div>`;
             } else {
-                avatarBox.innerHTML = `<span id="profile-avatar-text">${currentAuthData.displayName.charAt(0).toUpperCase()}</span>`;
+                avatarBox.innerHTML = `<span id="profile-avatar-text">${currentAuthData.displayName.charAt(0).toUpperCase()}</span><div class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity text-white text-xs font-semibold"><i class="fa-solid fa-camera mr-1"></i> Change</div>`;
             }
         }
 
@@ -470,13 +511,24 @@
             alert("Bio updated successfully!");
         }
 
-        window.updateProfilePic = async function() {
-            const newPic = document.getElementById("input-profile-pic").value.trim();
-            await update(ref(db, `users/${currentUser.uid}`), { profilePic: newPic });
-            currentAuthData.profilePic = newPic;
-            updateUserAvatarUI();
-            loadProfileUI();
-            alert("Profile Picture updated successfully!");
+        window.triggerProfilePicUpload = function() {
+            document.getElementById("hidden-avatar-input").click();
+        }
+
+        window.handleProfilePicSelection = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 2 * 1024 * 1024) { alert("ছবিটির সাইজ ২ মেগাবাইটের কম হতে হবে।"); return; }
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const base64Image = e.target.result;
+                await update(ref(db, `users/${currentUser.uid}`), { profilePic: base64Image });
+                currentAuthData.profilePic = base64Image;
+                updateUserAvatarUI();
+                loadProfileUI();
+                alert("প্রোফাইল পিকচার সফলভাবে আপডেট হয়েছে!");
+            };
+            reader.readAsDataURL(file);
         }
 
         window.toggleMyPrivacyMode = async function() {
@@ -506,57 +558,32 @@
             }
         }
 
-        // ==========================================
-        // SAFE SEARCH ENGINE WITH BLOCK CHECK HANDLING
-        // ==========================================
         window.executeRealtimeSearch = async function() {
             try {
                 let queryId = document.getElementById("search-id-input").value.trim().toLowerCase();
                 if (queryId.startsWith("@")) queryId = queryId.substring(1);
 
                 const card = document.getElementById("search-result-card");
-                if (!queryId || (currentAuthData && queryId === currentAuthData.idName)) { 
-                    card.classList.add("hidden"); 
-                    return; 
-                }
+                if (!queryId || (currentAuthData && queryId === currentAuthData.idName)) { card.classList.add("hidden"); return; }
 
                 const idSnap = await get(ref(db, `uniqueIDs/${queryId}`));
-                if (!idSnap.exists()) {
-                    alert("User not found with this Unique ID.");
-                    card.classList.add("hidden");
-                    return;
-                }
+                if (!idSnap.exists()) { alert("User not found with this Unique ID."); card.classList.add("hidden"); return; }
 
                 const targetUid = idSnap.val();
-
-                // Safe block check with fallback try-catch
                 let isBlocked = false;
                 try {
-                    const blockCheck1 = await get(ref(db, `blocks/${currentUser.uid}/${targetUid}`));
-                    const blockCheck2 = await get(ref(db, `blocks/${targetUid}/${currentUser.uid}`));
-                    if ((blockCheck1.exists() && blockCheck1.val()) || (blockCheck2.exists() && blockCheck2.val())) {
-                        isBlocked = true;
-                    }
-                } catch (bErr) {
-                    console.log("Block check bypassed:", bErr);
-                }
+                    const b1 = await get(ref(db, `blocks/${currentUser.uid}/${targetUid}`));
+                    const b2 = await get(ref(db, `blocks/${targetUid}/${currentUser.uid}`));
+                    if ((b1.exists() && b1.val()) || (b2.exists() && b2.val())) isBlocked = true;
+                } catch (e) {}
 
-                if (isBlocked) {
-                    alert("User not found.");
-                    card.classList.add("hidden");
-                    return;
-                }
+                if (isBlocked) { alert("User not found."); card.classList.add("hidden"); return; }
 
                 const targetSnap = await get(ref(db, `users/${targetUid}`));
-                if (!targetSnap.exists()) {
-                    alert("User not found.");
-                    card.classList.add("hidden");
-                    return;
-                }
+                if (!targetSnap.exists()) { card.classList.add("hidden"); return; }
                 const targetUser = targetSnap.val();
 
                 card.classList.remove("hidden");
-                
                 const avatarBox = document.getElementById("sr-avatar-container");
                 if (targetUser.profilePic) {
                     avatarBox.innerHTML = `<img src="${targetUser.profilePic}" class="w-full h-full object-cover">`;
@@ -581,14 +608,17 @@
                 const actionContainer = document.getElementById("sr-action-container");
                 actionContainer.innerHTML = "";
 
-                if (targetUser.privacy === "PUBLIC") {
-                    actionContainer.innerHTML = `<button onclick="sendRequest('${targetUid}', 'FRIEND')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-md"><i class="fa-solid fa-user-plus mr-1"></i> Send Friend Request</button>`;
+                if (chatSnap.exists() && chatSnap.val().active) {
+                    actionContainer.innerHTML = `<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-semibold px-4 py-2.5 rounded-xl"><i class="fa-solid fa-user-check mr-1"></i> Friends / Connected</span>`;
                 } else {
-                    actionContainer.innerHTML = `<button onclick="sendRequest('${targetUid}', 'MESSAGE')" class="bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-md"><i class="fa-solid fa-paper-plane mr-1"></i> Send Message Request</button>`;
+                    if (targetUser.privacy === "PUBLIC") {
+                        actionContainer.innerHTML = `<button onclick="sendRequest('${targetUid}', 'FRIEND')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-md"><i class="fa-solid fa-user-plus mr-1"></i> Send Friend Request</button>`;
+                    } else {
+                        actionContainer.innerHTML = `<button onclick="sendRequest('${targetUid}', 'MESSAGE')" class="bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-md"><i class="fa-solid fa-paper-plane mr-1"></i> Send Message Request</button>`;
+                    }
                 }
             } catch (err) {
                 console.error("Search Error:", err);
-                alert("সার্চ করার সময় একটি ত্রুটি ঘটেছে: " + err.message);
             }
         }
 
@@ -603,6 +633,7 @@
                 timestamp: Date.now()
             });
             alert(`${type === 'FRIEND' ? 'Friend' : 'Message'} Request Sent Successfully!`);
+            executeRealtimeSearch();
         }
 
         function listenToIncomingRequests() {
@@ -619,14 +650,15 @@
                         if (req && req.status === 'PENDING') {
                             count++;
                             feed.innerHTML += `
-                                <div class="bg-brand-panel p-5 rounded-2xl flex items-center justify-between border border-brand-border">
+                                <div class="bg-brand-panel p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-brand-border">
                                     <div>
                                         <h4 class="font-bold text-sm text-gray-100">${req.senderName}</h4>
-                                        <p class="text-xs text-emerald-400">@${req.senderIdName} • <span class="uppercase">${req.type} REQUEST</span></p>
+                                        <p class="text-xs text-emerald-400">@${req.senderIdName} • <span class="uppercase font-semibold">${req.type} REQUEST</span></p>
                                     </div>
-                                    <div class="flex items-center gap-2 text-xs font-semibold">
-                                        <button onclick="respondRequest('${reqKey}', '${req.senderUid}', '${req.type}', 'ACCEPT')" class="bg-emerald-600 text-white px-4 py-2 rounded-xl">Accept</button>
-                                        <button onclick="respondRequest('${reqKey}', '${req.senderUid}', '${req.type}', 'REJECT')" class="bg-brand-input text-rose-400 px-4 py-2 rounded-xl border border-brand-border">Reject</button>
+                                    <div class="flex flex-wrap items-center gap-2 text-xs font-semibold">
+                                        <button onclick="respondRequest('${reqKey}', '${req.senderUid}', '${req.type}', 'ACCEPT')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-xl transition-all shadow"><i class="fa-solid fa-check mr-1"></i> Confirm</button>
+                                        <button onclick="respondRequest('${reqKey}', '${req.senderUid}', '${req.type}', 'DELETE')" class="bg-brand-input hover:bg-brand-hover text-rose-400 px-3.5 py-2 rounded-xl border border-brand-border transition-all"><i class="fa-solid fa-trash mr-1"></i> Delete</button>
+                                        <button onclick="blockUserFromRequest('${req.senderUid}', '${reqKey}')" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 px-3.5 py-2 rounded-xl border border-rose-500/20 transition-all"><i class="fa-solid fa-ban mr-1"></i> Block</button>
                                     </div>
                                 </div>
                             `;
@@ -639,45 +671,88 @@
         }
 
         window.respondRequest = async function(reqKey, senderUid, type, action) {
-            await update(ref(db, `requests/${currentUser.uid}/${reqKey}`), { status: action });
             if (action === 'ACCEPT') {
                 const chatId = [currentUser.uid, senderUid].sort().join("_");
-                await set(ref(db, `chats/${chatId}`), { active: true, type: type });
+                await set(ref(db, `chats/${chatId}`), { 
+                    active: true, 
+                    type: type,
+                    user1: currentUser.uid,
+                    user2: senderUid,
+                    lastUpdated: Date.now()
+                });
+                await remove(ref(db, `requests/${currentUser.uid}/${reqKey}`));
+                alert("Request accepted! Chat created.");
+                setActiveTab('chats');
+            } else if (action === 'DELETE') {
+                await remove(ref(db, `requests/${currentUser.uid}/${reqKey}`));
+                alert("Request deleted.");
             }
-            alert(`Request ${action.toLowerCase()}ed.`);
+        }
+
+        window.blockUserFromRequest = async function(senderUid, reqKey) {
+            await set(ref(db, `blocks/${currentUser.uid}/${senderUid}`), true);
+            await remove(ref(db, `requests/${currentUser.uid}/${reqKey}`));
+            alert("User blocked and request removed.");
+            loadBlockedUsersList();
         }
 
         function loadConversationsList() {
             const chatsRef = ref(db, `chats`);
             onValue(chatsRef, async (snapshot) => {
                 const list = document.getElementById("chat-channels-list");
-                list.innerHTML = "";
+                globalChatsCache = [];
 
                 if (snapshot.exists()) {
-                    snapshot.forEach(async (child) => {
+                    const promises = [];
+                    snapshot.forEach((child) => {
                         const chatId = child.key;
                         const chatData = child.val();
                         if (chatId.includes(currentUser.uid) && chatData && chatData.active) {
                             const otherUid = chatId.replace(currentUser.uid, "").replace("_", "");
-                            const userSnap = await get(ref(db, `users/${otherUid}`));
-                            if (userSnap.exists()) {
-                                const otherUser = userSnap.val();
-                                list.innerHTML += `
-                                    <div onclick="openChat('${chatId}', '${otherUid}', '${otherUser.displayName}')" class="p-4 cursor-pointer hover:bg-brand-input flex items-center gap-3">
-                                        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold overflow-hidden flex-shrink-0">
-                                            ${otherUser.profilePic ? `<img src="${otherUser.profilePic}" class="w-full h-full object-cover">` : otherUser.displayName.charAt(0)}
-                                        </div>
-                                        <div class="overflow-hidden">
-                                            <h4 class="font-bold text-sm text-gray-100 truncate">${otherUser.displayName}</h4>
-                                            <p class="text-xs text-gray-400 truncate">@${otherUser.idName}</p>
-                                        </div>
-                                    </div>
-                                `;
-                            }
+                            promises.push(
+                                get(ref(db, `users/${otherUid}`)).then(userSnap => {
+                                    if (userSnap.exists()) {
+                                        const otherUser = userSnap.val();
+                                        globalChatsCache.push({ chatId, otherUid, displayName: otherUser.displayName, idName: otherUser.idName, profilePic: otherUser.profilePic });
+                                    }
+                                })
+                            );
                         }
                     });
+                    await Promise.all(promises);
+                    renderChatList(globalChatsCache);
+                } else {
+                    list.innerHTML = `<div class="p-6 text-center text-xs text-gray-500 italic">No conversations yet.</div>`;
                 }
             });
+        }
+
+        function renderChatList(chats) {
+            const list = document.getElementById("chat-channels-list");
+            list.innerHTML = "";
+            if (chats.length === 0) {
+                list.innerHTML = `<div class="p-6 text-center text-xs text-gray-500 italic">No conversations found.</div>`;
+                return;
+            }
+            chats.forEach(c => {
+                list.innerHTML += `
+                    <div onclick="openChat('${c.chatId}', '${c.otherUid}', '${c.displayName}')" class="p-4 cursor-pointer hover:bg-brand-input flex items-center gap-3 transition-all border-b border-brand-border/20">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold overflow-hidden flex-shrink-0">
+                            ${c.profilePic ? `<img src="${c.profilePic}" class="w-full h-full object-cover">` : c.displayName.charAt(0)}
+                        </div>
+                        <div class="overflow-hidden">
+                            <h4 class="font-bold text-sm text-gray-100 truncate">${c.displayName}</h4>
+                            <p class="text-xs text-gray-400 truncate">@${c.idName}</p>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        window.filterChatConversations = function() {
+            const query = document.getElementById("chat-search-input").value.toLowerCase();
+            const filtered = globalChatsCache.filter(c => c.displayName.toLowerCase().includes(query) || c.idName.toLowerCase().includes(query));
+            renderChatList(filtered);
         }
 
         window.openChat = function(chatId, targetUid, targetName) {
@@ -687,7 +762,16 @@
             document.getElementById("chat-empty-placeholder").classList.add("hidden");
             document.getElementById("chat-workspace").classList.remove("hidden");
             document.getElementById("cw-target-name").innerText = targetName;
+            document.getElementById("unfriend-chat-btn").classList.remove("hidden");
             loadMessages(chatId);
+        }
+
+        // Check if text consists solely of emojis (no text words)
+        function isOnlyEmoji(text) {
+            if (!text) return false;
+            const cleaned = text.replace(/[\s\d\p{P}]/gu, '');
+            const emojiRegex = /^(\p{Extended_Pictographic}|\p{Emoji_Component})+$/u;
+            return emojiRegex.test(cleaned) && cleaned.length > 0 && cleaned.length <= 10;
         }
 
         function loadMessages(chatId) {
@@ -697,13 +781,33 @@
                 area.innerHTML = "";
                 if (snapshot.exists()) {
                     snapshot.forEach((child) => {
+                        const mKey = child.key;
                         const m = child.val();
                         if (m) {
                             const isSent = m.senderUid === currentUser.uid;
+                            let innerContent = "";
+
+                            if (m.type === 'image') {
+                                innerContent = `<img src="${m.mediaUrl}" class="max-w-xs rounded-xl mb-1 object-cover cursor-pointer">`;
+                            } else if (m.type === 'video') {
+                                innerContent = `<video src="${m.mediaUrl}" controls class="max-w-xs rounded-xl mb-1"></video>`;
+                            } else {
+                                if (isOnlyEmoji(m.text)) {
+                                    innerContent = `<div class="text-4xl py-1">${m.text}</div>`;
+                                } else {
+                                    innerContent = `<p>${m.text}</p>`;
+                                }
+                            }
+
+                            const bubbleClass = isOnlyEmoji(m.text)
+                                ? `flex flex-col ${isSent ? 'items-end' : 'items-start'} cursor-pointer`
+                                : `max-w-[75%] px-4 py-2.5 rounded-2xl text-xs ${isSent ? 'bg-emerald-700 text-white rounded-tr-none' : 'bg-brand-panel border border-brand-border text-gray-100 rounded-tl-none'} shadow break-words cursor-pointer`;
+
                             area.innerHTML += `
-                                <div class="flex flex-col ${isSent ? 'items-end' : 'items-start'}">
-                                    <div class="max-w-[75%] px-4 py-2.5 rounded-2xl text-xs ${isSent ? 'bg-emerald-700 text-white rounded-tr-none' : 'bg-brand-panel border border-brand-border text-gray-100 rounded-tl-none'} shadow break-words">
-                                        <p>${m.text}</p>
+                                <div class="flex flex-col ${isSent ? 'items-end' : 'items-start'}" onclick="openMessageActionModal('${mKey}')">
+                                    <div class="${bubbleClass}">
+                                        ${innerContent}
+                                        ${m.reactions ? `<div class="text-xs bg-brand-input px-2 py-0.5 rounded-full border border-brand-border mt-1">${Object.values(m.reactions).join(' ')}</div>` : ''}
                                         <span class="text-[9px] text-gray-300 mt-1 block">${new Date(m.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                                     </div>
                                 </div>
@@ -715,6 +819,28 @@
             });
         }
 
+        window.openMessageActionModal = function(mKey) {
+            activeSelectedMsgKey = mKey;
+            document.getElementById("message-action-modal").classList.remove("hidden");
+        }
+
+        window.closeMessageActionModal = function() {
+            document.getElementById("message-action-modal").classList.add("hidden");
+            activeSelectedMsgKey = null;
+        }
+
+        window.addReactionToActiveMsg = async function(emoji) {
+            if (!activeChatId || !activeSelectedMsgKey) return;
+            await set(ref(db, `messages/${activeChatId}/${activeSelectedMsgKey}/reactions/${currentUser.uid}`), emoji);
+            closeMessageActionModal();
+        }
+
+        window.deleteActiveMsg = async function() {
+            if (!activeChatId || !activeSelectedMsgKey) return;
+            await remove(ref(db, `messages/${activeChatId}/${activeSelectedMsgKey}`));
+            closeMessageActionModal();
+        }
+
         window.sendRealtimeMessage = async function() {
             const input = document.getElementById("chat-message-input");
             const text = input.value.trim();
@@ -723,9 +849,59 @@
             await push(ref(db, `messages/${activeChatId}`), {
                 senderUid: currentUser.uid,
                 text: text,
+                type: 'text',
                 timestamp: Date.now()
             });
             input.value = "";
+        }
+
+        window.openGalleryDrawer = function() {
+            document.getElementById("gallery-drawer-modal").classList.remove("hidden");
+        }
+
+        window.closeGalleryDrawer = function() {
+            document.getElementById("gallery-drawer-modal").classList.add("hidden");
+        }
+
+        window.triggerDirectDeviceFilePicker = function() {
+            document.getElementById("device-native-file-input").click();
+            closeGalleryDrawer();
+        }
+
+        window.handleNativeFileSelected = async function(event) {
+            const file = event.target.files[0];
+            if (!file || !activeChatId) return;
+
+            if (file.size > 10 * 1024 * 1024) {
+                alert("ফাইলটি ১০ মেগাবাইটের কম হতে হবে।");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const base64Media = e.target.result;
+                const isVideo = file.type.startsWith('video');
+                await push(ref(db, `messages/${activeChatId}`), {
+                    senderUid: currentUser.uid,
+                    text: isVideo ? '[Video]' : '[Photo]',
+                    mediaUrl: base64Media,
+                    type: isVideo ? 'video' : 'image',
+                    timestamp: Date.now()
+                });
+            };
+            reader.readAsDataURL(file);
+            event.target.value = "";
+        }
+
+        window.unfriendActiveChat = async function() {
+            if (!activeChatId) return;
+            if (confirm("Are you sure you want to unfriend this user?")) {
+                await remove(ref(db, `chats/${activeChatId}`));
+                document.getElementById("chat-workspace").classList.add("hidden");
+                document.getElementById("chat-empty-placeholder").classList.remove("hidden");
+                document.getElementById("unfriend-chat-btn").classList.add("hidden");
+                alert("Unfriended successfully.");
+            }
         }
 
         window.toggleBlockActiveUser = async function() {
@@ -737,7 +913,11 @@
                 alert("User unblocked successfully.");
             } else {
                 await set(blockRef, true);
+                if (activeChatId) await remove(ref(db, `chats/${activeChatId}`));
                 alert("User blocked successfully.");
+                document.getElementById("chat-workspace").classList.add("hidden");
+                document.getElementById("chat-empty-placeholder").classList.remove("hidden");
+                document.getElementById("unfriend-chat-btn").classList.add("hidden");
             }
             loadBlockedUsersList();
         }
@@ -748,27 +928,34 @@
                 const list = document.getElementById("blocked-users-list");
                 list.innerHTML = "";
                 if (snapshot.exists()) {
-                    snapshot.forEach(async (child) => {
+                    const promises = [];
+                    snapshot.forEach((child) => {
                         const blockedUid = child.key;
-                        const userSnap = await get(ref(db, `users/${blockedUid}`));
-                        if (userSnap.exists()) {
-                            const uData = userSnap.val();
-                            list.innerHTML += `
-                                <div class="flex items-center justify-between p-3 rounded-xl bg-brand-input border border-brand-border">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-xs overflow-hidden flex-shrink-0">
-                                            ${uData.profilePic ? `<img src="${uData.profilePic}" class="w-full h-full object-cover">` : uData.displayName.charAt(0)}
+                        promises.push(
+                            get(ref(db, `users/${blockedUid}`)).then(userSnap => {
+                                if (userSnap.exists()) {
+                                    const uData = userSnap.val();
+                                    return `
+                                        <div class="flex items-center justify-between p-3 rounded-xl bg-brand-input border border-brand-border">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-xs overflow-hidden flex-shrink-0">
+                                                    ${uData.profilePic ? `<img src="${uData.profilePic}" class="w-full h-full object-cover">` : uData.displayName.charAt(0)}
+                                                </div>
+                                                <div>
+                                                    <h4 class="font-bold text-xs text-gray-100">${uData.displayName}</h4>
+                                                    <p class="text-[10px] text-gray-400">@${uData.idName}</p>
+                                                </div>
+                                            </div>
+                                            <button onclick="unblockUser('${blockedUid}')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-500 transition-all">Unblock</button>
                                         </div>
-                                        <div>
-                                            <h4 class="font-bold text-xs text-gray-100">${uData.displayName}</h4>
-                                            <p class="text-[10px] text-gray-400">@${uData.idName}</p>
-                                        </div>
-                                    </div>
-                                    <button onclick="unblockUser('${blockedUid}')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-500 transition-all">Unblock</button>
-                                </div>
-                            `;
-                        }
+                                    `;
+                                }
+                                return "";
+                            })
+                        );
                     });
+                    const results = await Promise.all(promises);
+                    list.innerHTML = results.join("");
                 } else {
                     list.innerHTML = `<p class="text-xs text-gray-500 italic">No blocked accounts found.</p>`;
                 }
