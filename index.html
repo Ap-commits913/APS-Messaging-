@@ -223,8 +223,11 @@
                         <div class="flex items-center gap-3">
                             <h4 id="cw-target-name" class="font-bold text-sm text-gray-100">Select Chat</h4>
                         </div>
-                        <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2">
                             <span id="cw-target-status" class="text-xs text-emerald-400 font-semibold hidden sm:inline">Active Secure Channel</span>
+                            <button id="unfriend-chat-btn" onclick="unfriendActiveChat()" class="px-3 py-1 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-all hidden">
+                                <i class="fa-solid fa-user-minus mr-1"></i> Unfriend
+                            </button>
                             <button id="block-user-btn" onclick="toggleBlockActiveUser()" class="px-3 py-1 rounded-lg text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-all">
                                 <i class="fa-solid fa-ban mr-1"></i> Block
                             </button>
@@ -274,6 +277,7 @@
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-brand-border">
+                        <!-- Update Profile Picture URL -->
                         <div>
                             <label class="text-xs font-semibold text-gray-300 block mb-1.5">Profile Picture Image URL</label>
                             <div class="flex gap-2">
@@ -282,6 +286,7 @@
                             </div>
                         </div>
 
+                        <!-- Update Bio -->
                         <div>
                             <label class="text-xs font-semibold text-gray-300 block mb-1.5">Bio (Visible based on Privacy)</label>
                             <div class="flex gap-2">
@@ -315,6 +320,9 @@
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getDatabase, ref, set, get, update, remove, push, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
+        // ==========================================
+        // FIREBASE CONFIGURATION
+        // ==========================================
         const firebaseConfig = {
           apiKey: "AIzaSyBdLGspLUDEQRRf_Hr8655pJrm889BDr0g",
           authDomain: "ap-chat-live-5f0c9.firebaseapp.com",
@@ -498,57 +506,89 @@
             }
         }
 
+        // ==========================================
+        // SAFE SEARCH ENGINE WITH BLOCK CHECK HANDLING
+        // ==========================================
         window.executeRealtimeSearch = async function() {
-            let queryId = document.getElementById("search-id-input").value.trim().toLowerCase();
-            if (queryId.startsWith("@")) queryId = queryId.substring(1);
+            try {
+                let queryId = document.getElementById("search-id-input").value.trim().toLowerCase();
+                if (queryId.startsWith("@")) queryId = queryId.substring(1);
 
-            const card = document.getElementById("search-result-card");
-            if (!queryId || queryId === currentAuthData.idName) { card.classList.add("hidden"); return; }
+                const card = document.getElementById("search-result-card");
+                if (!queryId || (currentAuthData && queryId === currentAuthData.idName)) { 
+                    card.classList.add("hidden"); 
+                    return; 
+                }
 
-            const idSnap = await get(ref(db, `uniqueIDs/${queryId}`));
-            if (!idSnap.exists()) {
-                alert("User not found with this Unique ID.");
-                card.classList.add("hidden");
-                return;
-            }
+                const idSnap = await get(ref(db, `uniqueIDs/${queryId}`));
+                if (!idSnap.exists()) {
+                    alert("User not found with this Unique ID.");
+                    card.classList.add("hidden");
+                    return;
+                }
 
-            const targetUid = idSnap.val();
-            const targetSnap = await get(ref(db, `users/${targetUid}`));
-            const targetUser = targetSnap.val();
+                const targetUid = idSnap.val();
 
-            card.classList.remove("hidden");
-            
-            const avatarBox = document.getElementById("sr-avatar-container");
-            if (targetUser.profilePic) {
-                avatarBox.innerHTML = `<img src="${targetUser.profilePic}" class="w-full h-full object-cover">`;
-            } else {
-                avatarBox.innerHTML = `<span id="sr-avatar-text">${targetUser.displayName.charAt(0).toUpperCase()}</span>`;
-            }
+                // Safe block check with fallback try-catch
+                let isBlocked = false;
+                try {
+                    const blockCheck1 = await get(ref(db, `blocks/${currentUser.uid}/${targetUid}`));
+                    const blockCheck2 = await get(ref(db, `blocks/${targetUid}/${currentUser.uid}`));
+                    if ((blockCheck1.exists() && blockCheck1.val()) || (blockCheck2.exists() && blockCheck2.val())) {
+                        isBlocked = true;
+                    }
+                } catch (bErr) {
+                    console.log("Block check bypassed:", bErr);
+                }
 
-            document.getElementById("sr-name").innerText = targetUser.displayName;
-            document.getElementById("sr-id").innerText = `@${targetUser.idName}`;
-            document.getElementById("sr-privacy").innerText = `${targetUser.privacy} ACCOUNT`;
+                if (isBlocked) {
+                    alert("User not found.");
+                    card.classList.add("hidden");
+                    return;
+                }
 
-            const bioElem = document.getElementById("sr-bio");
-            if (targetUser.privacy === "PUBLIC") {
-                bioElem.innerText = targetUser.bio || "No bio available.";
-            } else {
-                const chatId1 = [currentUser.uid, targetUid].sort().join("_");
-                const chatSnap = await get(ref(db, `chats/${chatId1}`));
-                if (chatSnap.exists()) {
+                const targetSnap = await get(ref(db, `users/${targetUid}`));
+                if (!targetSnap.exists()) {
+                    alert("User not found.");
+                    card.classList.add("hidden");
+                    return;
+                }
+                const targetUser = targetSnap.val();
+
+                card.classList.remove("hidden");
+                
+                const avatarBox = document.getElementById("sr-avatar-container");
+                if (targetUser.profilePic) {
+                    avatarBox.innerHTML = `<img src="${targetUser.profilePic}" class="w-full h-full object-cover">`;
+                } else {
+                    avatarBox.innerHTML = `<span id="sr-avatar-text">${targetUser.displayName.charAt(0).toUpperCase()}</span>`;
+                }
+
+                document.getElementById("sr-name").innerText = targetUser.displayName;
+                document.getElementById("sr-id").innerText = `@${targetUser.idName}`;
+                document.getElementById("sr-privacy").innerText = `${targetUser.privacy} ACCOUNT`;
+
+                const bioElem = document.getElementById("sr-bio");
+                const chatId = [currentUser.uid, targetUid].sort().join("_");
+                const chatSnap = await get(ref(db, `chats/${chatId}`));
+
+                if (targetUser.privacy === "PUBLIC" || (chatSnap.exists() && chatSnap.val().active)) {
                     bioElem.innerText = targetUser.bio || "No bio available.";
                 } else {
                     bioElem.innerText = "🔒 Bio hidden (Private Account - Friends Only)";
                 }
-            }
 
-            const actionContainer = document.getElementById("sr-action-container");
-            actionContainer.innerHTML = "";
+                const actionContainer = document.getElementById("sr-action-container");
+                actionContainer.innerHTML = "";
 
-            if (targetUser.privacy === "PUBLIC") {
-                actionContainer.innerHTML = `<button onclick="sendRequest('${targetUid}', 'FRIEND')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-md"><i class="fa-solid fa-user-plus mr-1"></i> Send Friend Request</button>`;
-            } else {
-                actionContainer.innerHTML = `<button onclick="sendRequest('${targetUid}', 'MESSAGE')" class="bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-md"><i class="fa-solid fa-paper-plane mr-1"></i> Send Message Request</button>`;
+                if (targetUser.privacy === "PUBLIC") {
+                    actionContainer.innerHTML = `<button onclick="sendRequest('${targetUid}', 'FRIEND')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-md"><i class="fa-solid fa-user-plus mr-1"></i> Send Friend Request</button>`;
+                } else {
+                    actionContainer.innerHTML = `<button onclick="sendRequest('${targetUid}', 'MESSAGE')" class="bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-md"><i class="fa-solid fa-paper-plane mr-1"></i> Send Message Request</button>`;
+                }
+            } catch (err) {
+                console.error("Search Error:", err);
+                alert("সার্চ করার সময় একটি ত্রুটি ঘটেছে: " + err.message);
             }
         }
 
@@ -576,7 +616,7 @@
                     snapshot.forEach((childSnap) => {
                         const reqKey = childSnap.key;
                         const req = childSnap.val();
-                        if (req.status === 'PENDING') {
+                        if (req && req.status === 'PENDING') {
                             count++;
                             feed.innerHTML += `
                                 <div class="bg-brand-panel p-5 rounded-2xl flex items-center justify-between border border-brand-border">
@@ -616,7 +656,8 @@
                 if (snapshot.exists()) {
                     snapshot.forEach(async (child) => {
                         const chatId = child.key;
-                        if (chatId.includes(currentUser.uid)) {
+                        const chatData = child.val();
+                        if (chatId.includes(currentUser.uid) && chatData && chatData.active) {
                             const otherUid = chatId.replace(currentUser.uid, "").replace("_", "");
                             const userSnap = await get(ref(db, `users/${otherUid}`));
                             if (userSnap.exists()) {
@@ -657,15 +698,17 @@
                 if (snapshot.exists()) {
                     snapshot.forEach((child) => {
                         const m = child.val();
-                        const isSent = m.senderUid === currentUser.uid;
-                        area.innerHTML += `
-                            <div class="flex flex-col ${isSent ? 'items-end' : 'items-start'}">
-                                <div class="max-w-[75%] px-4 py-2.5 rounded-2xl text-xs ${isSent ? 'bg-emerald-700 text-white rounded-tr-none' : 'bg-brand-panel border border-brand-border text-gray-100 rounded-tl-none'} shadow break-words">
-                                    <p>${m.text}</p>
-                                    <span class="text-[9px] text-gray-300 mt-1 block">${new Date(m.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                        if (m) {
+                            const isSent = m.senderUid === currentUser.uid;
+                            area.innerHTML += `
+                                <div class="flex flex-col ${isSent ? 'items-end' : 'items-start'}">
+                                    <div class="max-w-[75%] px-4 py-2.5 rounded-2xl text-xs ${isSent ? 'bg-emerald-700 text-white rounded-tr-none' : 'bg-brand-panel border border-brand-border text-gray-100 rounded-tl-none'} shadow break-words">
+                                        <p>${m.text}</p>
+                                        <span class="text-[9px] text-gray-300 mt-1 block">${new Date(m.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                    </div>
                                 </div>
-                            </div>
-                        `;
+                            `;
+                        }
                     });
                     area.scrollTop = area.scrollHeight;
                 }
