@@ -223,11 +223,8 @@
                         <div class="flex items-center gap-3">
                             <h4 id="cw-target-name" class="font-bold text-sm text-gray-100">Select Chat</h4>
                         </div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-3">
                             <span id="cw-target-status" class="text-xs text-emerald-400 font-semibold hidden sm:inline">Active Secure Channel</span>
-                            <button id="unfriend-chat-btn" onclick="unfriendActiveChat()" class="px-3 py-1 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-all hidden">
-                                <i class="fa-solid fa-user-minus mr-1"></i> Unfriend
-                            </button>
                             <button id="block-user-btn" onclick="toggleBlockActiveUser()" class="px-3 py-1 rounded-lg text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-all">
                                 <i class="fa-solid fa-ban mr-1"></i> Block
                             </button>
@@ -277,7 +274,6 @@
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-brand-border">
-                        <!-- Update Profile Picture URL -->
                         <div>
                             <label class="text-xs font-semibold text-gray-300 block mb-1.5">Profile Picture Image URL</label>
                             <div class="flex gap-2">
@@ -286,7 +282,6 @@
                             </div>
                         </div>
 
-                        <!-- Update Bio -->
                         <div>
                             <label class="text-xs font-semibold text-gray-300 block mb-1.5">Bio (Visible based on Privacy)</label>
                             <div class="flex gap-2">
@@ -320,9 +315,6 @@
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getDatabase, ref, set, get, update, remove, push, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-        // ==========================================
-        // FIREBASE CONFIGURATION
-        // ==========================================
         const firebaseConfig = {
           apiKey: "AIzaSyBdLGspLUDEQRRf_Hr8655pJrm889BDr0g",
           authDomain: "ap-chat-live-5f0c9.firebaseapp.com",
@@ -506,115 +498,61 @@
             }
         }
 
-        // ==========================================
-        // FIXED SEARCH ENGINE WITH BULLETPROOF ERROR HANDLING
-        // ==========================================
         window.executeRealtimeSearch = async function() {
-            try {
-                let queryId = document.getElementById("search-id-input").value.trim().toLowerCase();
-                if (queryId.startsWith("@")) queryId = queryId.substring(1);
+            let queryId = document.getElementById("search-id-input").value.trim().toLowerCase();
+            if (queryId.startsWith("@")) queryId = queryId.substring(1);
 
-                const card = document.getElementById("search-result-card");
-                if (!queryId || queryId === currentAuthData.idName) { 
-                    card.classList.add("hidden"); 
-                    return; 
-                }
+            const card = document.getElementById("search-result-card");
+            if (!queryId || queryId === currentAuthData.idName) { card.classList.add("hidden"); return; }
 
-                const idSnap = await get(ref(db, `uniqueIDs/${queryId}`));
-                if (!idSnap.exists()) {
-                    alert("User not found with this Unique ID.");
-                    card.classList.add("hidden");
-                    return;
-                }
+            const idSnap = await get(ref(db, `uniqueIDs/${queryId}`));
+            if (!idSnap.exists()) {
+                alert("User not found with this Unique ID.");
+                card.classList.add("hidden");
+                return;
+            }
 
-                const targetUid = idSnap.val();
+            const targetUid = idSnap.val();
+            const targetSnap = await get(ref(db, `users/${targetUid}`));
+            const targetUser = targetSnap.val();
 
-                // Check mutual blocks safely
-                const blockCheck1 = await get(ref(db, `blocks/${currentUser.uid}/${targetUid}`));
-                const blockCheck2 = await get(ref(db, `blocks/${targetUid}/${currentUser.uid}`));
-                if (blockCheck1.exists() || blockCheck2.exists()) {
-                    alert("User not found.");
-                    card.classList.add("hidden");
-                    return;
-                }
+            card.classList.remove("hidden");
+            
+            const avatarBox = document.getElementById("sr-avatar-container");
+            if (targetUser.profilePic) {
+                avatarBox.innerHTML = `<img src="${targetUser.profilePic}" class="w-full h-full object-cover">`;
+            } else {
+                avatarBox.innerHTML = `<span id="sr-avatar-text">${targetUser.displayName.charAt(0).toUpperCase()}</span>`;
+            }
 
-                const targetSnap = await get(ref(db, `users/${targetUid}`));
-                if (!targetSnap.exists()) {
-                    card.classList.add("hidden");
-                    return;
-                }
-                const targetUser = targetSnap.val();
+            document.getElementById("sr-name").innerText = targetUser.displayName;
+            document.getElementById("sr-id").innerText = `@${targetUser.idName}`;
+            document.getElementById("sr-privacy").innerText = `${targetUser.privacy} ACCOUNT`;
 
-                card.classList.remove("hidden");
-                
-                const avatarBox = document.getElementById("sr-avatar-container");
-                if (targetUser.profilePic) {
-                    avatarBox.innerHTML = `<img src="${targetUser.profilePic}" class="w-full h-full object-cover">`;
-                } else {
-                    avatarBox.innerHTML = `<span id="sr-avatar-text">${targetUser.displayName.charAt(0).toUpperCase()}</span>`;
-                }
-
-                document.getElementById("sr-name").innerText = targetUser.displayName;
-                document.getElementById("sr-id").innerText = `@${targetUser.idName}`;
-                document.getElementById("sr-privacy").innerText = `${targetUser.privacy} ACCOUNT`;
-
-                // Bio Visibility check
-                const bioElem = document.getElementById("sr-bio");
-                const chatId = [currentUser.uid, targetUid].sort().join("_");
-                const chatSnap = await get(ref(db, `chats/${chatId}`));
-
-                if (targetUser.privacy === "PUBLIC" || (chatSnap.exists() && chatSnap.val().active)) {
+            const bioElem = document.getElementById("sr-bio");
+            if (targetUser.privacy === "PUBLIC") {
+                bioElem.innerText = targetUser.bio || "No bio available.";
+            } else {
+                const chatId1 = [currentUser.uid, targetUid].sort().join("_");
+                const chatSnap = await get(ref(db, `chats/${chatId1}`));
+                if (chatSnap.exists()) {
                     bioElem.innerText = targetUser.bio || "No bio available.";
                 } else {
                     bioElem.innerText = "🔒 Bio hidden (Private Account - Friends Only)";
                 }
+            }
 
-                // Check pending requests
-                const reqsToMeSnap = await get(ref(db, `requests/${currentUser.uid}`));
-                const reqsFromMeSnap = await get(ref(db, `requests/${targetUid}`));
+            const actionContainer = document.getElementById("sr-action-container");
+            actionContainer.innerHTML = "";
 
-                let hasPendingRequest = false;
-                if (reqsToMeSnap.exists()) {
-                    reqsToMeSnap.forEach(child => {
-                        const val = child.val();
-                        if (val.senderUid === targetUid && val.status === 'PENDING') hasPendingRequest = true;
-                    });
-                }
-                if (reqsFromMeSnap.exists()) {
-                    reqsFromMeSnap.forEach(child => {
-                        const val = child.val();
-                        if (val.senderUid === currentUser.uid && val.status === 'PENDING') hasPendingRequest = true;
-                    });
-                }
-
-                const actionContainer = document.getElementById("sr-action-container");
-                actionContainer.innerHTML = "";
-
-                if (chatSnap.exists() && chatSnap.val().active) {
-                    actionContainer.innerHTML = `<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-semibold px-4 py-2.5 rounded-xl"><i class="fa-solid fa-user-check mr-1"></i> Friends / Connected</span>`;
-                } else if (hasPendingRequest) {
-                    actionContainer.innerHTML = `<span class="bg-amber-500/10 text-amber-400 border border-amber-500/30 text-xs font-semibold px-4 py-2.5 rounded-xl"><i class="fa-solid fa-clock mr-1"></i> Request Pending</span>`;
-                } else {
-                    if (targetUser.privacy === "PUBLIC") {
-                        actionContainer.innerHTML = `<button onclick="sendRequest('${targetUid}', 'FRIEND')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-md"><i class="fa-solid fa-user-plus mr-1"></i> Send Friend Request</button>`;
-                    } else {
-                        actionContainer.innerHTML = `<button onclick="sendRequest('${targetUid}', 'MESSAGE')" class="bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-md"><i class="fa-solid fa-paper-plane mr-1"></i> Send Message Request</button>`;
-                    }
-                }
-            } catch (err) {
-                console.error("Search Error:", err);
-                alert("সার্চ করার সময় একটি ত্রুটি ঘটেছে। কনসোল চেক করুন।");
+            if (targetUser.privacy === "PUBLIC") {
+                actionContainer.innerHTML = `<button onclick="sendRequest('${targetUid}', 'FRIEND')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-md"><i class="fa-solid fa-user-plus mr-1"></i> Send Friend Request</button>`;
+            } else {
+                actionContainer.innerHTML = `<button onclick="sendRequest('${targetUid}', 'MESSAGE')" class="bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-md"><i class="fa-solid fa-paper-plane mr-1"></i> Send Message Request</button>`;
             }
         }
 
         window.sendRequest = async function(targetUid, type) {
-            const b1 = await get(ref(db, `blocks/${currentUser.uid}/${targetUid}`));
-            const b2 = await get(ref(db, `blocks/${targetUid}/${currentUser.uid}`));
-            if (b1.exists() || b2.exists()) {
-                alert("Cannot send request to this user.");
-                return;
-            }
-
             const reqRef = push(ref(db, `requests/${targetUid}`));
             await set(reqRef, {
                 senderUid: currentUser.uid,
@@ -625,7 +563,6 @@
                 timestamp: Date.now()
             });
             alert(`${type === 'FRIEND' ? 'Friend' : 'Message'} Request Sent Successfully!`);
-            executeRealtimeSearch();
         }
 
         function listenToIncomingRequests() {
@@ -642,15 +579,14 @@
                         if (req.status === 'PENDING') {
                             count++;
                             feed.innerHTML += `
-                                <div class="bg-brand-panel p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-brand-border">
+                                <div class="bg-brand-panel p-5 rounded-2xl flex items-center justify-between border border-brand-border">
                                     <div>
                                         <h4 class="font-bold text-sm text-gray-100">${req.senderName}</h4>
-                                        <p class="text-xs text-emerald-400">@${req.senderIdName} • <span class="uppercase font-semibold">${req.type} REQUEST</span></p>
+                                        <p class="text-xs text-emerald-400">@${req.senderIdName} • <span class="uppercase">${req.type} REQUEST</span></p>
                                     </div>
-                                    <div class="flex flex-wrap items-center gap-2 text-xs font-semibold">
-                                        <button onclick="respondRequest('${reqKey}', '${req.senderUid}', '${req.type}', 'ACCEPT')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-xl transition-all shadow"><i class="fa-solid fa-check mr-1"></i> Confirm</button>
-                                        <button onclick="respondRequest('${reqKey}', '${req.senderUid}', '${req.type}', 'DELETE')" class="bg-brand-input hover:bg-brand-hover text-rose-400 px-3.5 py-2 rounded-xl border border-brand-border transition-all"><i class="fa-solid fa-trash mr-1"></i> Delete</button>
-                                        <button onclick="blockUserFromRequest('${req.senderUid}', '${reqKey}')" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 px-3.5 py-2 rounded-xl border border-rose-500/20 transition-all"><i class="fa-solid fa-ban mr-1"></i> Block</button>
+                                    <div class="flex items-center gap-2 text-xs font-semibold">
+                                        <button onclick="respondRequest('${reqKey}', '${req.senderUid}', '${req.type}', 'ACCEPT')" class="bg-emerald-600 text-white px-4 py-2 rounded-xl">Accept</button>
+                                        <button onclick="respondRequest('${reqKey}', '${req.senderUid}', '${req.type}', 'REJECT')" class="bg-brand-input text-rose-400 px-4 py-2 rounded-xl border border-brand-border">Reject</button>
                                     </div>
                                 </div>
                             `;
@@ -663,29 +599,12 @@
         }
 
         window.respondRequest = async function(reqKey, senderUid, type, action) {
+            await update(ref(db, `requests/${currentUser.uid}/${reqKey}`), { status: action });
             if (action === 'ACCEPT') {
                 const chatId = [currentUser.uid, senderUid].sort().join("_");
-                await set(ref(db, `chats/${chatId}`), { 
-                    active: true, 
-                    type: type,
-                    user1: currentUser.uid,
-                    user2: senderUid,
-                    lastUpdated: Date.now()
-                });
-                await remove(ref(db, `requests/${currentUser.uid}/${reqKey}`));
-                alert("Request accepted! Chat created.");
-                setActiveTab('chats');
-            } else if (action === 'DELETE') {
-                await remove(ref(db, `requests/${currentUser.uid}/${reqKey}`));
-                alert("Request deleted.");
+                await set(ref(db, `chats/${chatId}`), { active: true, type: type });
             }
-        }
-
-        window.blockUserFromRequest = async function(senderUid, reqKey) {
-            await set(ref(db, `blocks/${currentUser.uid}/${senderUid}`), true);
-            await remove(ref(db, `requests/${currentUser.uid}/${reqKey}`));
-            alert("User blocked and request removed.");
-            loadBlockedUsersList();
+            alert(`Request ${action.toLowerCase()}ed.`);
         }
 
         function loadConversationsList() {
@@ -695,47 +614,27 @@
                 list.innerHTML = "";
 
                 if (snapshot.exists()) {
-                    let hasChats = false;
-                    const promises = [];
-
-                    snapshot.forEach((child) => {
+                    snapshot.forEach(async (child) => {
                         const chatId = child.key;
-                        const chatData = child.val();
-                        
-                        if (chatId.includes(currentUser.uid) && chatData && chatData.active) {
-                            hasChats = true;
+                        if (chatId.includes(currentUser.uid)) {
                             const otherUid = chatId.replace(currentUser.uid, "").replace("_", "");
-                            
-                            promises.push(
-                                get(ref(db, `users/${otherUid}`)).then(userSnap => {
-                                    if (userSnap.exists()) {
-                                        const otherUser = userSnap.val();
-                                        return `
-                                            <div onclick="openChat('${chatId}', '${otherUid}', '${otherUser.displayName}')" class="p-4 cursor-pointer hover:bg-brand-input flex items-center gap-3 transition-all border-b border-brand-border/20">
-                                                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold overflow-hidden flex-shrink-0">
-                                                    ${otherUser.profilePic ? `<img src="${otherUser.profilePic}" class="w-full h-full object-cover">` : otherUser.displayName.charAt(0)}
-                                                </div>
-                                                <div class="overflow-hidden">
-                                                    <h4 class="font-bold text-sm text-gray-100 truncate">${otherUser.displayName}</h4>
-                                                    <p class="text-xs text-gray-400 truncate">@${otherUser.idName}</p>
-                                                </div>
-                                            </div>
-                                        `;
-                                    }
-                                    return "";
-                                })
-                            );
+                            const userSnap = await get(ref(db, `users/${otherUid}`));
+                            if (userSnap.exists()) {
+                                const otherUser = userSnap.val();
+                                list.innerHTML += `
+                                    <div onclick="openChat('${chatId}', '${otherUid}', '${otherUser.displayName}')" class="p-4 cursor-pointer hover:bg-brand-input flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold overflow-hidden flex-shrink-0">
+                                            ${otherUser.profilePic ? `<img src="${otherUser.profilePic}" class="w-full h-full object-cover">` : otherUser.displayName.charAt(0)}
+                                        </div>
+                                        <div class="overflow-hidden">
+                                            <h4 class="font-bold text-sm text-gray-100 truncate">${otherUser.displayName}</h4>
+                                            <p class="text-xs text-gray-400 truncate">@${otherUser.idName}</p>
+                                        </div>
+                                    </div>
+                                `;
+                            }
                         }
                     });
-
-                    const results = await Promise.all(promises);
-                    list.innerHTML = results.join("");
-
-                    if (!hasChats) {
-                        list.innerHTML = `<div class="p-6 text-center text-xs text-gray-500 italic">No conversations yet.</div>`;
-                    }
-                } else {
-                    list.innerHTML = `<div class="p-6 text-center text-xs text-gray-500 italic">No conversations yet.</div>`;
                 }
             });
         }
@@ -747,7 +646,6 @@
             document.getElementById("chat-empty-placeholder").classList.add("hidden");
             document.getElementById("chat-workspace").classList.remove("hidden");
             document.getElementById("cw-target-name").innerText = targetName;
-            document.getElementById("unfriend-chat-btn").classList.remove("hidden");
             loadMessages(chatId);
         }
 
@@ -779,30 +677,12 @@
             const text = input.value.trim();
             if (!text || !activeChatId) return;
 
-            const blockSnap = await get(ref(db, `blocks/${activeChatUserId}/${currentUser.uid}`));
-            const blockSnap2 = await get(ref(db, `blocks/${currentUser.uid}/${activeChatUserId}`));
-            if (blockSnap.exists() || blockSnap2.exists()) {
-                alert("You cannot send messages to this user.");
-                return;
-            }
-
             await push(ref(db, `messages/${activeChatId}`), {
                 senderUid: currentUser.uid,
                 text: text,
                 timestamp: Date.now()
             });
             input.value = "";
-        }
-
-        window.unfriendActiveChat = async function() {
-            if (!activeChatId) return;
-            if (confirm("Are you sure you want to unfriend this user?")) {
-                await remove(ref(db, `chats/${activeChatId}`));
-                document.getElementById("chat-workspace").classList.add("hidden");
-                document.getElementById("chat-empty-placeholder").classList.remove("hidden");
-                document.getElementById("unfriend-chat-btn").classList.add("hidden");
-                alert("Unfriended successfully.");
-            }
         }
 
         window.toggleBlockActiveUser = async function() {
@@ -814,13 +694,7 @@
                 alert("User unblocked successfully.");
             } else {
                 await set(blockRef, true);
-                if (activeChatId) {
-                    await remove(ref(db, `chats/${activeChatId}`));
-                }
                 alert("User blocked successfully.");
-                document.getElementById("chat-workspace").classList.add("hidden");
-                document.getElementById("chat-empty-placeholder").classList.remove("hidden");
-                document.getElementById("unfriend-chat-btn").classList.add("hidden");
             }
             loadBlockedUsersList();
         }
@@ -831,34 +705,27 @@
                 const list = document.getElementById("blocked-users-list");
                 list.innerHTML = "";
                 if (snapshot.exists()) {
-                    const promises = [];
-                    snapshot.forEach((child) => {
+                    snapshot.forEach(async (child) => {
                         const blockedUid = child.key;
-                        promises.push(
-                            get(ref(db, `users/${blockedUid}`)).then(userSnap => {
-                                if (userSnap.exists()) {
-                                    const uData = userSnap.val();
-                                    return `
-                                        <div class="flex items-center justify-between p-3 rounded-xl bg-brand-input border border-brand-border">
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-xs overflow-hidden flex-shrink-0">
-                                                    ${uData.profilePic ? `<img src="${uData.profilePic}" class="w-full h-full object-cover">` : uData.displayName.charAt(0)}
-                                                </div>
-                                                <div>
-                                                    <h4 class="font-bold text-xs text-gray-100">${uData.displayName}</h4>
-                                                    <p class="text-[10px] text-gray-400">@${uData.idName}</p>
-                                                </div>
-                                            </div>
-                                            <button onclick="unblockUser('${blockedUid}')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-500 transition-all">Unblock</button>
+                        const userSnap = await get(ref(db, `users/${blockedUid}`));
+                        if (userSnap.exists()) {
+                            const uData = userSnap.val();
+                            list.innerHTML += `
+                                <div class="flex items-center justify-between p-3 rounded-xl bg-brand-input border border-brand-border">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-xs overflow-hidden flex-shrink-0">
+                                            ${uData.profilePic ? `<img src="${uData.profilePic}" class="w-full h-full object-cover">` : uData.displayName.charAt(0)}
                                         </div>
-                                    `;
-                                }
-                                return "";
-                            })
-                        );
+                                        <div>
+                                            <h4 class="font-bold text-xs text-gray-100">${uData.displayName}</h4>
+                                            <p class="text-[10px] text-gray-400">@${uData.idName}</p>
+                                        </div>
+                                    </div>
+                                    <button onclick="unblockUser('${blockedUid}')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-500 transition-all">Unblock</button>
+                                </div>
+                            `;
+                        }
                     });
-                    const results = await Promise.all(promises);
-                    list.innerHTML = results.join("");
                 } else {
                     list.innerHTML = `<p class="text-xs text-gray-500 italic">No blocked accounts found.</p>`;
                 }
