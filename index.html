@@ -226,7 +226,8 @@
                     <div id="chat-channels-list" class="flex-1 overflow-y-auto divide-y divide-brand-border/40"></div>
                 </div>
 
-                <div id="chat-workspace" class="hidden sm:flex flex-1 flex-col h-full bg-brand-dark relative overflow-hidden">
+                <!-- மொபைல் স্ক্রিনে ডিসপ্লে ফিক্স করার জন্য sm:flex এর বদলে শুধু flex করা হলো -->
+                <div id="chat-workspace" class="hidden flex flex-1 flex-col h-full bg-brand-dark relative overflow-hidden">
                     <div class="h-16 px-4 bg-brand-panel border-b border-brand-border flex items-center justify-between z-10 gap-3">
                         <div class="flex items-center gap-3">
                             <h4 id="cw-target-name" class="font-bold text-sm text-gray-100">Select Chat</h4>
@@ -706,10 +707,8 @@
                     snapshot.forEach((child) => {
                         const chatId = child.key;
                         const chatData = child.val();
-                        // নিশ্চিত করা হলো যাতে বর্তমান ইউজারের চ্যাটগুলোই সঠিকভাবে ফিল্টার হয়
                         if (chatId.includes(currentUser.uid) && chatData && chatData.active) {
-                            const parts = chatId.split("_");
-                            const otherUid = parts[0] === currentUser.uid ? parts[1] : parts[0];
+                            const otherUid = chatId.replace(currentUser.uid, "").replace("_", "");
                             promises.push(
                                 get(ref(db, `users/${otherUid}`)).then(userSnap => {
                                     if (userSnap.exists()) {
@@ -728,7 +727,6 @@
             });
         }
 
-        // 100% RELIABLE DOM-BASED CHAT LIST RENDERING & CLICK FIX
         function renderChatList(chats) {
             const list = document.getElementById("chat-channels-list");
             list.innerHTML = "";
@@ -738,19 +736,17 @@
             }
             chats.forEach(c => {
                 const div = document.createElement('div');
-                div.className = "p-4 cursor-pointer hover:bg-brand-input flex items-center gap-3 transition-all border-b border-brand-border/20 select-none";
+                div.className = "p-4 cursor-pointer hover:bg-brand-input flex items-center gap-3 transition-all border-b border-brand-border/20";
                 div.innerHTML = `
-                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold overflow-hidden flex-shrink-0 pointer-events-none">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold overflow-hidden flex-shrink-0">
                         ${c.profilePic ? `<img src="${c.profilePic}" class="w-full h-full object-cover">` : c.displayName.charAt(0)}
                     </div>
-                    <div class="overflow-hidden pointer-events-none">
+                    <div class="overflow-hidden">
                         <h4 class="font-bold text-sm text-gray-100 truncate">${c.displayName}</h4>
                         <p class="text-xs text-gray-400 truncate">@${c.idName}</p>
                     </div>
                 `;
-                // সরাসরি নেটিভ ইভেন্ট লিসেনার দিয়ে ক্লিক নিশ্চিত করা হলো যাতে প্রতিবার ট্যাপ করলে চ্যাট বক্স খুলে যায়
-                div.addEventListener('click', (e) => {
-                    e.preventDefault();
+                div.addEventListener('click', () => {
                     openChat(c.chatId, c.otherUid, c.displayName);
                 });
                 list.appendChild(div);
@@ -763,13 +759,17 @@
             renderChatList(filtered);
         }
 
-        // ABSOLUTE CHAT OPENER FUNCTION
+        // স্ক্রিনশটের নির্দেশনা অনুযায়ী আপডেট করা ওপেন চ্যাট ফাংশন
         window.openChat = function(chatId, targetUid, targetName) {
             activeChatId = chatId;
             activeChatUserId = targetUid;
             setActiveTab('chats');
+            
             document.getElementById("chat-empty-placeholder").classList.add("hidden");
-            document.getElementById("chat-workspace").classList.remove("hidden");
+
+            const workspace = document.getElementById("chat-workspace");
+            workspace.classList.remove("hidden");
+
             document.getElementById("cw-target-name").innerText = targetName;
             document.getElementById("unfriend-chat-btn").classList.remove("hidden");
             loadMessages(chatId);
@@ -921,7 +921,7 @@
                 alert("User unblocked successfully.");
             } else {
                 await set(blockRef, true);
-                if (activeChatId) await remove(ref(db, `chats/${blockRef}`));
+                if (activeChatId) await remove(ref(db, `chats/${activeChatId}`));
                 alert("User blocked successfully.");
                 document.getElementById("chat-workspace").classList.add("hidden");
                 document.getElementById("chat-empty-placeholder").classList.remove("hidden");
@@ -965,7 +965,7 @@
                     const results = await Promise.all(promises);
                     list.innerHTML = results.join("");
                 } else {
-                    list.innerHTML = `<p class="text-xs text-gray-500 italic">No blocked accounts found. Bio and user privacy are active.</p>`;
+                    list.innerHTML = `<p class="text-xs text-gray-500 italic">No blocked accounts found.</p>`;
                 }
             });
         }
