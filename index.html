@@ -98,7 +98,7 @@
         </div>
     </div>
 
-    <!-- TOP GLOBAL HEADER BAR (Fixed Responsive Layout) -->
+    <!-- TOP GLOBAL HEADER BAR -->
     <header class="min-h-16 py-3 sm:py-0 bg-brand-panel border-b border-brand-border px-4 sm:px-6 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 z-40 relative">
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white shadow-lg shadow-brand-600/20 flex-shrink-0">
@@ -180,17 +180,17 @@
                     <div class="bg-brand-panel p-6 rounded-3xl border border-brand-border shadow-2xl relative overflow-hidden">
                         <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                             <div class="flex items-center gap-5">
-                                <div class="w-20 h-20 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/40 flex items-center justify-center font-bold text-2xl text-emerald-400 overflow-hidden" id="sr-avatar-container">
+                                <div class="w-20 h-20 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/40 flex items-center justify-center font-bold text-2xl text-emerald-400 overflow-hidden flex-shrink-0" id="sr-avatar-container">
                                     <span id="sr-avatar-text">U</span>
                                 </div>
                                 <div>
                                     <h3 id="sr-name" class="text-xl font-bold text-gray-100">---</h3>
                                     <span id="sr-id" class="text-xs font-semibold text-emerald-400">@---</span>
-                                    <p id="sr-bio" class="text-xs text-gray-300 mt-1 italic">---</p>
+                                    <p id="sr-bio" class="text-xs text-gray-300 mt-1 italic break-words">---</p>
                                     <p id="sr-privacy" class="text-xs text-gray-400 mt-1 uppercase font-medium">---</p>
                                 </div>
                             </div>
-                            <div id="sr-action-container"></div>
+                            <div id="sr-action-container" class="flex flex-wrap gap-2"></div>
                         </div>
                     </div>
                 </div>
@@ -219,9 +219,16 @@
                 </div>
 
                 <div id="chat-workspace" class="hidden sm:flex flex-1 flex-col h-full bg-brand-dark relative overflow-hidden">
-                    <div class="h-16 px-4 bg-brand-panel border-b border-brand-border flex items-center justify-between z-10">
-                        <h4 id="cw-target-name" class="font-bold text-sm text-gray-100">Select Chat</h4>
-                        <span id="cw-target-status" class="text-xs text-emerald-400 font-semibold">Active Secure Channel</span>
+                    <div class="h-16 px-4 bg-brand-panel border-b border-brand-border flex items-center justify-between z-10 gap-3">
+                        <div class="flex items-center gap-3">
+                            <h4 id="cw-target-name" class="font-bold text-sm text-gray-100">Select Chat</h4>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span id="cw-target-status" class="text-xs text-emerald-400 font-semibold hidden sm:inline">Active Secure Channel</span>
+                            <button id="block-user-btn" onclick="toggleBlockActiveUser()" class="px-3 py-1 rounded-lg text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-all">
+                                <i class="fa-solid fa-ban mr-1"></i> Block
+                            </button>
+                        </div>
                     </div>
 
                     <div id="messages-scroll-area" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
@@ -255,7 +262,7 @@
                 <div class="bg-brand-panel p-6 rounded-3xl border border-brand-border shadow-xl space-y-6">
                     <div class="flex flex-col sm:flex-row items-center gap-6">
                         <div class="relative group">
-                            <div id="profile-avatar-box" class="w-24 h-24 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/40 flex items-center justify-center font-bold text-3xl text-emerald-400 overflow-hidden shadow-inner">
+                            <div id="profile-avatar-box" class="w-24 h-24 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/40 flex items-center justify-center font-bold text-3xl text-emerald-400 overflow-hidden shadow-inner flex-shrink-0">
                                 <span id="profile-avatar-text">U</span>
                             </div>
                         </div>
@@ -267,7 +274,7 @@
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-brand-border">
-                        <!-- Update Profile Picture URL/Image -->
+                        <!-- Update Profile Picture URL -->
                         <div>
                             <label class="text-xs font-semibold text-gray-300 block mb-1.5">Profile Picture Image URL</label>
                             <div class="flex gap-2">
@@ -278,7 +285,7 @@
 
                         <!-- Update Bio -->
                         <div>
-                            <label class="text-xs font-semibold text-gray-300 block mb-1.5">Bio (Visibility based on Account Privacy)</label>
+                            <label class="text-xs font-semibold text-gray-300 block mb-1.5">Bio (Visible based on Privacy)</label>
                             <div class="flex gap-2">
                                 <input type="text" id="input-profile-bio" placeholder="Hey there! I am using APS Messaging." class="flex-1 bg-brand-input border border-brand-border rounded-xl px-4 py-2.5 text-xs text-gray-100 focus:outline-none focus:border-emerald-500">
                                 <button onclick="updateProfileBio()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition-all">Save</button>
@@ -293,7 +300,7 @@
                         <h3 class="text-base font-bold text-gray-100 flex items-center gap-2">
                             <i class="fa-solid fa-ban text-rose-400"></i> Blocked Accounts
                         </h3>
-                        <p class="text-xs text-gray-400 mt-0.5">Manage users you have restricted from messaging or interacting with you.</p>
+                        <p class="text-xs text-gray-400 mt-0.5">Manage users you have restricted from interacting with you.</p>
                     </div>
                     <div id="blocked-users-list" class="space-y-3">
                         <p class="text-xs text-gray-500 italic">No blocked accounts found.</p>
@@ -308,7 +315,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getDatabase, ref, set, get, update, push, onValue, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, set, get, update, remove, push, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         // ==========================================
         // FIREBASE CONFIGURATION
@@ -331,6 +338,7 @@
         let currentUser = null;
         let currentAuthData = null;
         let activeChatUserId = null;
+        let activeChatId = null;
         let isSignUp = false;
 
         window.toggleAuthMode = function() {
@@ -424,18 +432,20 @@
             setActiveTab('search');
             listenToIncomingRequests();
             loadConversationsList();
+            loadBlockedUsersList();
         }
 
         function updateUserAvatarUI() {
             const navAvatar = document.getElementById("my-nav-avatar");
-            if (currentAuthData.profilePic) {
+            if (currentAuthData && currentAuthData.profilePic) {
                 navAvatar.innerHTML = `<img src="${currentAuthData.profilePic}" class="w-full h-full object-cover">`;
-            } else {
+            } else if (currentAuthData) {
                 navAvatar.innerText = currentAuthData.displayName.charAt(0).toUpperCase();
             }
         }
 
         function loadProfileUI() {
+            if (!currentAuthData) return;
             document.getElementById("profile-display-name").innerText = currentAuthData.displayName;
             document.getElementById("profile-id-name").innerText = `@${currentAuthData.idName}`;
             document.getElementById("profile-email").innerText = currentAuthData.email;
@@ -489,6 +499,7 @@
             document.getElementById(`view-${tabId}`).classList.remove("hidden");
             if (tabId === 'profile') {
                 loadProfileUI();
+                loadBlockedUsersList();
             }
         }
 
@@ -523,12 +534,11 @@
             document.getElementById("sr-id").innerText = `@${targetUser.idName}`;
             document.getElementById("sr-privacy").innerText = `${targetUser.privacy} ACCOUNT`;
 
-            // Bio Visibility check: Public Account = Visible to all, Private Account = Visible only if friend (or connected)
+            // Bio Visibility check
             const bioElem = document.getElementById("sr-bio");
             if (targetUser.privacy === "PUBLIC") {
                 bioElem.innerText = targetUser.bio || "No bio available.";
             } else {
-                // For private account, check if they are friends/connected
                 const chatId1 = [currentUser.uid, targetUid].sort().join("_");
                 const chatSnap = await get(ref(db, `chats/${chatId1}`));
                 if (chatSnap.exists()) {
@@ -619,12 +629,12 @@
                                 const otherUser = userSnap.val();
                                 list.innerHTML += `
                                     <div onclick="openChat('${chatId}', '${otherUid}', '${otherUser.displayName}')" class="p-4 cursor-pointer hover:bg-brand-input flex items-center gap-3">
-                                        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold overflow-hidden">
+                                        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold overflow-hidden flex-shrink-0">
                                             ${otherUser.profilePic ? `<img src="${otherUser.profilePic}" class="w-full h-full object-cover">` : otherUser.displayName.charAt(0)}
                                         </div>
-                                        <div>
-                                            <h4 class="font-bold text-sm text-gray-100">${otherUser.displayName}</h4>
-                                            <p class="text-xs text-gray-400">@${otherUser.idName}</p>
+                                        <div class="overflow-hidden">
+                                            <h4 class="font-bold text-sm text-gray-100 truncate">${otherUser.displayName}</h4>
+                                            <p class="text-xs text-gray-400 truncate">@${otherUser.idName}</p>
                                         </div>
                                     </div>
                                 `;
@@ -645,7 +655,6 @@
             loadMessages(chatId);
         }
 
-        let activeChatId = null;
         function loadMessages(chatId) {
             const msgRef = ref(db, `messages/${chatId}`);
             onValue(msgRef, (snapshot) => {
@@ -657,7 +666,7 @@
                         const isSent = m.senderUid === currentUser.uid;
                         area.innerHTML += `
                             <div class="flex flex-col ${isSent ? 'items-end' : 'items-start'}">
-                                <div class="max-w-[75%] px-4 py-2.5 rounded-2xl text-xs ${isSent ? 'bg-emerald-700 text-white rounded-tr-none' : 'bg-brand-panel border border-brand-border text-gray-100 rounded-tl-none'} shadow">
+                                <div class="max-w-[75%] px-4 py-2.5 rounded-2xl text-xs ${isSent ? 'bg-emerald-700 text-white rounded-tr-none' : 'bg-brand-panel border border-brand-border text-gray-100 rounded-tl-none'} shadow break-words">
                                     <p>${m.text}</p>
                                     <span class="text-[9px] text-gray-300 mt-1 block">${new Date(m.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                                 </div>
@@ -680,6 +689,59 @@
                 timestamp: Date.now()
             });
             input.value = "";
+        }
+
+        window.toggleBlockActiveUser = async function() {
+            if (!activeChatUserId) return;
+            const blockRef = ref(db, `blocks/${currentUser.uid}/${activeChatUserId}`);
+            const snap = await get(blockRef);
+            if (snap.exists()) {
+                await remove(blockRef);
+                alert("User unblocked successfully.");
+            } else {
+                await set(blockRef, true);
+                alert("User blocked successfully.");
+            }
+            loadBlockedUsersList();
+        }
+
+        function loadBlockedUsersList() {
+            const blockRef = ref(db, `blocks/${currentUser.uid}`);
+            onValue(blockRef, async (snapshot) => {
+                const list = document.getElementById("blocked-users-list");
+                list.innerHTML = "";
+                if (snapshot.exists()) {
+                    snapshot.forEach(async (child) => {
+                        const blockedUid = child.key;
+                        const userSnap = await get(ref(db, `users/${blockedUid}`));
+                        if (userSnap.exists()) {
+                            const uData = userSnap.val();
+                            list.innerHTML += `
+                                <div class="flex items-center justify-between p-3 rounded-xl bg-brand-input border border-brand-border">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-xs overflow-hidden flex-shrink-0">
+                                            ${uData.profilePic ? `<img src="${uData.profilePic}" class="w-full h-full object-cover">` : uData.displayName.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <h4 class="font-bold text-xs text-gray-100">${uData.displayName}</h4>
+                                            <p class="text-[10px] text-gray-400">@${uData.idName}</p>
+                                        </div>
+                                    </div>
+                                    <button onclick="unblockUser('${blockedUid}')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-500 transition-all">Unblock</button>
+                                </div>
+                            `;
+                        }
+                    });
+                } else {
+                    list.innerHTML = `<p class="text-xs text-gray-500 italic">No blocked accounts found.</p>`;
+                }
+            });
+        }
+
+        window.unblockUser = async function(targetUid) {
+            await remove(ref(db, `blocks/${currentUser.uid}/${targetUid}`));
+            alert("User unblocked.");
+            loadBlockedUsersList();
         }
     </script>
 </body>
