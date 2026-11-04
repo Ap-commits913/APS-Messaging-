@@ -98,7 +98,7 @@
         </div>
     </div>
 
-    <!-- TOP GLOBAL HEADER BAR -->
+    <!-- TOP GLOBAL HEADER BAR (Fixed Responsive Layout) -->
     <header class="min-h-16 py-3 sm:py-0 bg-brand-panel border-b border-brand-border px-4 sm:px-6 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 z-40 relative">
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white shadow-lg shadow-brand-600/20 flex-shrink-0">
@@ -127,7 +127,7 @@
 
     <!-- MAIN APP WRAPPER -->
     <div class="flex flex-1 overflow-hidden relative">
-        <nav class="w-16 sm:w-20 bg-brand-panel border-r border-brand-border flex flex-col items-center py-5 justify-between z-30">
+        <nav class="w-16 sm:w-20 bg-brand-panel border-r border-brand-border flex flex-col items-center py-5 justify-between z-30 flex-shrink-0">
             <div class="flex flex-col gap-5 items-center w-full">
                 <button onclick="setActiveTab('search')" id="nav-search" class="nav-btn p-3 rounded-2xl text-gray-400 hover:text-emerald-400 hover:bg-brand-hover/50 transition-all relative group" title="Discover Users">
                     <i class="fa-solid fa-magnifying-glass text-lg group-hover:scale-110 transition-transform"></i>
@@ -162,6 +162,7 @@
                         <p class="text-xs text-gray-400 mt-1">Search live users across the database using their Unique ID Name.</p>
                     </div>
                     <div class="relative">
+                        <!-- pr-28 added so typed text doesn't hide behind absolute button -->
                         <input type="text" id="search-id-input" placeholder="Enter Unique ID (e.g. abdullah_pro)..."
                             onkeyup="if(event.key==='Enter') executeRealtimeSearch()"
                             class="w-full bg-brand-input border border-brand-border rounded-2xl px-5 py-4 pl-12 pr-28 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-emerald-500">
@@ -220,10 +221,10 @@
                     <div id="messages-scroll-area" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
 
                     <div class="p-3 bg-brand-panel border-t border-brand-border flex items-center gap-2">
-                        <input type="text" id="chat-message-input" placeholder="Type encrypted message..."
+                        <input type="text" id="chat-message-input" placeholder="Type encrypted message or emoji..."
                             onkeypress="if(event.key==='Enter') sendRealtimeMessage()"
                             class="flex-1 bg-brand-input border border-brand-border rounded-xl px-4 py-3 text-sm text-gray-100 focus:outline-none focus:border-emerald-500">
-                        <button onclick="sendRealtimeMessage()" class="w-10 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center font-bold shadow-md">
+                        <button onclick="sendRealtimeMessage()" class="w-10 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center font-bold shadow-md flex-shrink-0">
                             <i class="fa-solid fa-paper-plane text-sm"></i>
                         </button>
                     </div>
@@ -274,7 +275,7 @@
             document.getElementById("auth-toggle-mode-btn").innerText = isSignUp ? "Already have an account? Sign In" : "Don't have an account? Create one";
         }
 
-        // Updated Auth Function with Password validation and Error Logging
+        // Updated Auth Function with Token Refresh & Zero Cache Interference
         window.handleAuthAction = async function() {
             const email = document.getElementById("auth-email").value.trim();
             const pass = document.getElementById("auth-password").value.trim();
@@ -307,13 +308,25 @@
                     }
 
                     const cred = await createUserWithEmailAndPassword(auth, email, pass);
-                    const uid = cred.user.uid;
+                    const freshUser = cred.user;
 
-                    await set(ref(db, `users/${uid}`), { uid, email, displayName, idName, privacy, status: "Secure on APS Messaging" });
-                    await set(ref(db, `uniqueIDs/${idName}`), uid);
+                    // Force fresh token to prevent permission denied errors
+                    await freshUser.getIdToken(true);
+
+                    await set(ref(db, `users/${freshUser.uid}`), { 
+                        uid: freshUser.uid, 
+                        email: email, 
+                        displayName: displayName, 
+                        idName: idName, 
+                        privacy: privacy, 
+                        status: "Secure on APS Messaging" 
+                    });
+                    await set(ref(db, `uniqueIDs/${idName}`), freshUser.uid);
+
                     alert("অ্যাকাউন্ট সফলভাবে তৈরি হয়েছে!");
                 } else {
-                    await signInWithEmailAndPassword(auth, email, pass);
+                    const cred = await signInWithEmailAndPassword(auth, email, pass);
+                    await cred.user.getIdToken(true);
                 }
             } catch (err) {
                 console.error("Auth Error Code:", err.code, "Message:", err.message);
@@ -357,10 +370,10 @@
         function updatePrivacyBadge() {
             const btn = document.getElementById("header-privacy-badge");
             if (currentAuthData.privacy === "PUBLIC") {
-                btn.className = "px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-2";
+                btn.className = "px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-2 whitespace-nowrap";
                 btn.innerHTML = `<i class="fa-solid fa-globe"></i> Public Account`;
             } else {
-                btn.className = "px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-2";
+                btn.className = "px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-2 whitespace-nowrap";
                 btn.innerHTML = `<i class="fa-solid fa-lock"></i> Private Account`;
             }
         }
