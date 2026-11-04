@@ -534,7 +534,6 @@
             document.getElementById("sr-id").innerText = `@${targetUser.idName}`;
             document.getElementById("sr-privacy").innerText = `${targetUser.privacy} ACCOUNT`;
 
-            // Bio Visibility check
             const bioElem = document.getElementById("sr-bio");
             if (targetUser.privacy === "PUBLIC") {
                 bioElem.innerText = targetUser.bio || "No bio available.";
@@ -585,14 +584,15 @@
                         if (req.status === 'PENDING') {
                             count++;
                             feed.innerHTML += `
-                                <div class="bg-brand-panel p-5 rounded-2xl flex items-center justify-between border border-brand-border">
+                                <div class="bg-brand-panel p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-brand-border">
                                     <div>
                                         <h4 class="font-bold text-sm text-gray-100">${req.senderName}</h4>
-                                        <p class="text-xs text-emerald-400">@${req.senderIdName} • <span class="uppercase">${req.type} REQUEST</span></p>
+                                        <p class="text-xs text-emerald-400">@${req.senderIdName} • <span class="uppercase font-semibold">${req.type} REQUEST</span></p>
                                     </div>
-                                    <div class="flex items-center gap-2 text-xs font-semibold">
-                                        <button onclick="respondRequest('${reqKey}', '${req.senderUid}', '${req.type}', 'ACCEPT')" class="bg-emerald-600 text-white px-4 py-2 rounded-xl">Accept</button>
-                                        <button onclick="respondRequest('${reqKey}', '${req.senderUid}', '${req.type}', 'REJECT')" class="bg-brand-input text-rose-400 px-4 py-2 rounded-xl border border-brand-border">Reject</button>
+                                    <div class="flex flex-wrap items-center gap-2 text-xs font-semibold">
+                                        <button onclick="respondRequest('${reqKey}', '${req.senderUid}', '${req.type}', 'ACCEPT')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-xl transition-all shadow"><i class="fa-solid fa-check mr-1"></i> Confirm</button>
+                                        <button onclick="respondRequest('${reqKey}', '${req.senderUid}', '${req.type}', 'DELETE')" class="bg-brand-input hover:bg-brand-hover text-rose-400 px-3.5 py-2 rounded-xl border border-brand-border transition-all"><i class="fa-solid fa-trash mr-1"></i> Delete</button>
+                                        <button onclick="blockUserFromRequest('${req.senderUid}', '${reqKey}')" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 px-3.5 py-2 rounded-xl border border-rose-500/20 transition-all"><i class="fa-solid fa-ban mr-1"></i> Block</button>
                                     </div>
                                 </div>
                             `;
@@ -605,12 +605,33 @@
         }
 
         window.respondRequest = async function(reqKey, senderUid, type, action) {
-            await update(ref(db, `requests/${currentUser.uid}/${reqKey}`), { status: action });
             if (action === 'ACCEPT') {
                 const chatId = [currentUser.uid, senderUid].sort().join("_");
-                await set(ref(db, `chats/${chatId}`), { active: true, type: type });
+                // Properly initialize chat mapping for both participants
+                await set(ref(db, `chats/${chatId}`), { 
+                    active: true, 
+                    type: type,
+                    user1: currentUser.uid,
+                    user2: senderUid,
+                    lastUpdated: Date.now()
+                });
+                // Remove request after acceptance
+                await remove(ref(db, `requests/${currentUser.uid}/${reqKey}`));
+                alert("Request accepted! Chat created.");
+                setActiveTab('chats');
+            } else if (action === 'DELETE') {
+                // Delete request completely so sender can send again
+                await remove(ref(db, `requests/${currentUser.uid}/${reqKey}`));
+                alert("Request deleted.");
             }
-            alert(`Request ${action.toLowerCase()}ed.`);
+        }
+
+        window.blockUserFromRequest = async function(senderUid, reqKey) {
+            // Block user and remove request
+            await set(ref(db, `blocks/${currentUser.uid}/${senderUid}`), true);
+            await remove(ref(db, `requests/${currentUser.uid}/${reqKey}`));
+            alert("User blocked and request removed.");
+            loadBlockedUsersList();
         }
 
         function loadConversationsList() {
@@ -620,27 +641,46 @@
                 list.innerHTML = "";
 
                 if (snapshot.exists()) {
-                    snapshot.forEach(async (child) => {
+                    let hasChats = false;
+                    const promises = [];
+
+                    snapshot.forEach((child) => {
                         const chatId = child.key;
+                        const chatData = child.val();
                         if (chatId.includes(currentUser.uid)) {
+                            hasChats = true;
                             const otherUid = chatId.replace(currentUser.uid, "").replace("_", "");
-                            const userSnap = await get(ref(db, `users/${otherUid}`));
-                            if (userSnap.exists()) {
-                                const otherUser = userSnap.val();
-                                list.innerHTML += `
-                                    <div onclick="openChat('${chatId}', '${otherUid}', '${otherUser.displayName}')" class="p-4 cursor-pointer hover:bg-brand-input flex items-center gap-3">
-                                        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold overflow-hidden flex-shrink-0">
-                                            ${otherUser.profilePic ? `<img src="${otherUser.profilePic}" class="w-full h-full object-cover">` : otherUser.displayName.charAt(0)}
-                                        </div>
-                                        <div class="overflow-hidden">
-                                            <h4 class="font-bold text-sm text-gray-100 truncate">${otherUser.displayName}</h4>
-                                            <p class="text-xs text-gray-400 truncate">@${otherUser.idName}</p>
-                                        </div>
-                                    </div>
-                                `;
-                            }
+                            
+                            promises.push(
+                                get(ref(db, `users/${otherUid}`)).then(userSnap => {
+                                    if (userSnap.exists()) {
+                                        const otherUser = userSnap.val();
+                                        return `
+                                            <div onclick="openChat('${chatId}', '${otherUid}', '${otherUser.displayName}')" class="p-4 cursor-pointer hover:bg-brand-input flex items-center gap-3 transition-all border-b border-brand-border/20">
+                                                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold overflow-hidden flex-shrink-0">
+                                                    ${otherUser.profilePic ? `<img src="${otherUser.profilePic}" class="w-full h-full object-cover">` : otherUser.displayName.charAt(0)}
+                                                </div>
+                                                <div class="overflow-hidden">
+                                                    <h4 class="font-bold text-sm text-gray-100 truncate">${otherUser.displayName}</h4>
+                                                    <p class="text-xs text-gray-400 truncate">@${otherUser.idName}</p>
+                                                </div>
+                                            </div>
+                                        `;
+                                    }
+                                    return "";
+                                })
+                            );
                         }
                     });
+
+                    const results = await Promise.all(promises);
+                    list.innerHTML = results.join("");
+
+                    if (!hasChats) {
+                        list.innerHTML = `<div class="p-6 text-center text-xs text-gray-500 italic">No conversations yet.</div>`;
+                    }
+                } else {
+                    list.innerHTML = `<div class="p-6 text-center text-xs text-gray-500 italic">No conversations yet.</div>`;
                 }
             });
         }
@@ -683,6 +723,13 @@
             const text = input.value.trim();
             if (!text || !activeChatId) return;
 
+            // Check if blocked before sending
+            const blockSnap = await get(ref(db, `blocks/${activeChatUserId}/${currentUser.uid}`));
+            if (blockSnap.exists()) {
+                alert("You cannot send messages to this user.");
+                return;
+            }
+
             await push(ref(db, `messages/${activeChatId}`), {
                 senderUid: currentUser.uid,
                 text: text,
@@ -711,27 +758,34 @@
                 const list = document.getElementById("blocked-users-list");
                 list.innerHTML = "";
                 if (snapshot.exists()) {
-                    snapshot.forEach(async (child) => {
+                    const promises = [];
+                    snapshot.forEach((child) => {
                         const blockedUid = child.key;
-                        const userSnap = await get(ref(db, `users/${blockedUid}`));
-                        if (userSnap.exists()) {
-                            const uData = userSnap.val();
-                            list.innerHTML += `
-                                <div class="flex items-center justify-between p-3 rounded-xl bg-brand-input border border-brand-border">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-xs overflow-hidden flex-shrink-0">
-                                            ${uData.profilePic ? `<img src="${uData.profilePic}" class="w-full h-full object-cover">` : uData.displayName.charAt(0)}
+                        promises.push(
+                            get(ref(db, `users/${blockedUid}`)).then(userSnap => {
+                                if (userSnap.exists()) {
+                                    const uData = userSnap.val();
+                                    return `
+                                        <div class="flex items-center justify-between p-3 rounded-xl bg-brand-input border border-brand-border">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-xs overflow-hidden flex-shrink-0">
+                                                    ${uData.profilePic ? `<img src="${uData.profilePic}" class="w-full h-full object-cover">` : uData.displayName.charAt(0)}
+                                                </div>
+                                                <div>
+                                                    <h4 class="font-bold text-xs text-gray-100">${uData.displayName}</h4>
+                                                    <p class="text-[10px] text-gray-400">@${uData.idName}</p>
+                                                </div>
+                                            </div>
+                                            <button onclick="unblockUser('${blockedUid}')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-500 transition-all">Unblock</button>
                                         </div>
-                                        <div>
-                                            <h4 class="font-bold text-xs text-gray-100">${uData.displayName}</h4>
-                                            <p class="text-[10px] text-gray-400">@${uData.idName}</p>
-                                        </div>
-                                    </div>
-                                    <button onclick="unblockUser('${blockedUid}')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-500 transition-all">Unblock</button>
-                                </div>
-                            `;
-                        }
+                                    `;
+                                }
+                                return "";
+                            })
+                        );
                     });
+                    const results = await Promise.all(promises);
+                    list.innerHTML = results.join("");
                 } else {
                     list.innerHTML = `<p class="text-xs text-gray-500 italic">No blocked accounts found.</p>`;
                 }
