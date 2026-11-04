@@ -506,96 +506,108 @@
             }
         }
 
+        // ==========================================
+        // FIXED SEARCH ENGINE WITH BULLETPROOF ERROR HANDLING
+        // ==========================================
         window.executeRealtimeSearch = async function() {
-            let queryId = document.getElementById("search-id-input").value.trim().toLowerCase();
-            if (queryId.startsWith("@")) queryId = queryId.substring(1);
+            try {
+                let queryId = document.getElementById("search-id-input").value.trim().toLowerCase();
+                if (queryId.startsWith("@")) queryId = queryId.substring(1);
 
-            const card = document.getElementById("search-result-card");
-            if (!queryId || queryId === currentAuthData.idName) { card.classList.add("hidden"); return; }
-
-            const idSnap = await get(ref(db, `uniqueIDs/${queryId}`));
-            if (!idSnap.exists()) {
-                alert("User not found with this Unique ID.");
-                card.classList.add("hidden");
-                return;
-            }
-
-            const targetUid = idSnap.val();
-
-            // Check if blocked mutually or individually
-            const blockCheck1 = await get(ref(db, `blocks/${currentUser.uid}/${targetUid}`));
-            const blockCheck2 = await get(ref(db, `blocks/${targetUid}/${currentUser.uid}`));
-            if (blockCheck1.exists() || blockCheck2.exists()) {
-                alert("User not found.");
-                card.classList.add("hidden");
-                return;
-            }
-
-            const targetSnap = await get(ref(db, `users/${targetUid}`));
-            if (!targetSnap.exists()) {
-                card.classList.add("hidden");
-                return;
-            }
-            const targetUser = targetSnap.val();
-
-            card.classList.remove("hidden");
-            
-            const avatarBox = document.getElementById("sr-avatar-container");
-            if (targetUser.profilePic) {
-                avatarBox.innerHTML = `<img src="${targetUser.profilePic}" class="w-full h-full object-cover">`;
-            } else {
-                avatarBox.innerHTML = `<span id="sr-avatar-text">${targetUser.displayName.charAt(0).toUpperCase()}</span>`;
-            }
-
-            document.getElementById("sr-name").innerText = targetUser.displayName;
-            document.getElementById("sr-id").innerText = `@${targetUser.idName}`;
-            document.getElementById("sr-privacy").innerText = `${targetUser.privacy} ACCOUNT`;
-
-            // Bio Visibility check
-            const bioElem = document.getElementById("sr-bio");
-            const chatId = [currentUser.uid, targetUid].sort().join("_");
-            const chatSnap = await get(ref(db, `chats/${chatId}`));
-
-            if (targetUser.privacy === "PUBLIC" || chatSnap.exists()) {
-                bioElem.innerText = targetUser.bio || "No bio available.";
-            } else {
-                bioElem.innerText = "🔒 Bio hidden (Private Account - Friends Only)";
-            }
-
-            // Check existing pending requests (either sent by me or received by me)
-            const reqsToMeSnap = await get(ref(db, `requests/${currentUser.uid}`));
-            const reqsFromMeSnap = await get(ref(db, `requests/${targetUid}`));
-
-            let hasPendingRequest = false;
-            if (reqsToMeSnap.exists()) {
-                reqsToMeSnap.forEach(child => {
-                    if (child.val().senderUid === targetUid && child.val().status === 'PENDING') hasPendingRequest = true;
-                });
-            }
-            if (reqsFromMeSnap.exists()) {
-                reqsFromMeSnap.forEach(child => {
-                    if (child.val().senderUid === currentUser.uid && child.val().status === 'PENDING') hasPendingRequest = true;
-                });
-            }
-
-            const actionContainer = document.getElementById("sr-action-container");
-            actionContainer.innerHTML = "";
-
-            if (chatSnap.exists()) {
-                actionContainer.innerHTML = `<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-semibold px-4 py-2.5 rounded-xl"><i class="fa-solid fa-user-check mr-1"></i> Friends / Connected</span>`;
-            } else if (hasPendingRequest) {
-                actionContainer.innerHTML = `<span class="bg-amber-500/10 text-amber-400 border border-amber-500/30 text-xs font-semibold px-4 py-2.5 rounded-xl"><i class="fa-solid fa-clock mr-1"></i> Request Pending</span>`;
-            } else {
-                if (targetUser.privacy === "PUBLIC") {
-                    actionContainer.innerHTML = `<button onclick="sendRequest('${targetUid}', 'FRIEND')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-md"><i class="fa-solid fa-user-plus mr-1"></i> Send Friend Request</button>`;
-                } else {
-                    actionContainer.innerHTML = `<button onclick="sendRequest('${targetUid}', 'MESSAGE')" class="bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-md"><i class="fa-solid fa-paper-plane mr-1"></i> Send Message Request</button>`;
+                const card = document.getElementById("search-result-card");
+                if (!queryId || queryId === currentAuthData.idName) { 
+                    card.classList.add("hidden"); 
+                    return; 
                 }
+
+                const idSnap = await get(ref(db, `uniqueIDs/${queryId}`));
+                if (!idSnap.exists()) {
+                    alert("User not found with this Unique ID.");
+                    card.classList.add("hidden");
+                    return;
+                }
+
+                const targetUid = idSnap.val();
+
+                // Check mutual blocks safely
+                const blockCheck1 = await get(ref(db, `blocks/${currentUser.uid}/${targetUid}`));
+                const blockCheck2 = await get(ref(db, `blocks/${targetUid}/${currentUser.uid}`));
+                if (blockCheck1.exists() || blockCheck2.exists()) {
+                    alert("User not found.");
+                    card.classList.add("hidden");
+                    return;
+                }
+
+                const targetSnap = await get(ref(db, `users/${targetUid}`));
+                if (!targetSnap.exists()) {
+                    card.classList.add("hidden");
+                    return;
+                }
+                const targetUser = targetSnap.val();
+
+                card.classList.remove("hidden");
+                
+                const avatarBox = document.getElementById("sr-avatar-container");
+                if (targetUser.profilePic) {
+                    avatarBox.innerHTML = `<img src="${targetUser.profilePic}" class="w-full h-full object-cover">`;
+                } else {
+                    avatarBox.innerHTML = `<span id="sr-avatar-text">${targetUser.displayName.charAt(0).toUpperCase()}</span>`;
+                }
+
+                document.getElementById("sr-name").innerText = targetUser.displayName;
+                document.getElementById("sr-id").innerText = `@${targetUser.idName}`;
+                document.getElementById("sr-privacy").innerText = `${targetUser.privacy} ACCOUNT`;
+
+                // Bio Visibility check
+                const bioElem = document.getElementById("sr-bio");
+                const chatId = [currentUser.uid, targetUid].sort().join("_");
+                const chatSnap = await get(ref(db, `chats/${chatId}`));
+
+                if (targetUser.privacy === "PUBLIC" || (chatSnap.exists() && chatSnap.val().active)) {
+                    bioElem.innerText = targetUser.bio || "No bio available.";
+                } else {
+                    bioElem.innerText = "🔒 Bio hidden (Private Account - Friends Only)";
+                }
+
+                // Check pending requests
+                const reqsToMeSnap = await get(ref(db, `requests/${currentUser.uid}`));
+                const reqsFromMeSnap = await get(ref(db, `requests/${targetUid}`));
+
+                let hasPendingRequest = false;
+                if (reqsToMeSnap.exists()) {
+                    reqsToMeSnap.forEach(child => {
+                        const val = child.val();
+                        if (val.senderUid === targetUid && val.status === 'PENDING') hasPendingRequest = true;
+                    });
+                }
+                if (reqsFromMeSnap.exists()) {
+                    reqsFromMeSnap.forEach(child => {
+                        const val = child.val();
+                        if (val.senderUid === currentUser.uid && val.status === 'PENDING') hasPendingRequest = true;
+                    });
+                }
+
+                const actionContainer = document.getElementById("sr-action-container");
+                actionContainer.innerHTML = "";
+
+                if (chatSnap.exists() && chatSnap.val().active) {
+                    actionContainer.innerHTML = `<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-semibold px-4 py-2.5 rounded-xl"><i class="fa-solid fa-user-check mr-1"></i> Friends / Connected</span>`;
+                } else if (hasPendingRequest) {
+                    actionContainer.innerHTML = `<span class="bg-amber-500/10 text-amber-400 border border-amber-500/30 text-xs font-semibold px-4 py-2.5 rounded-xl"><i class="fa-solid fa-clock mr-1"></i> Request Pending</span>`;
+                } else {
+                    if (targetUser.privacy === "PUBLIC") {
+                        actionContainer.innerHTML = `<button onclick="sendRequest('${targetUid}', 'FRIEND')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-md"><i class="fa-solid fa-user-plus mr-1"></i> Send Friend Request</button>`;
+                    } else {
+                        actionContainer.innerHTML = `<button onclick="sendRequest('${targetUid}', 'MESSAGE')" class="bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-md"><i class="fa-solid fa-paper-plane mr-1"></i> Send Message Request</button>`;
+                    }
+                }
+            } catch (err) {
+                console.error("Search Error:", err);
+                alert("সার্চ করার সময় একটি ত্রুটি ঘটেছে। কনসোল চেক করুন।");
             }
         }
 
         window.sendRequest = async function(targetUid, type) {
-            // Double check block status
             const b1 = await get(ref(db, `blocks/${currentUser.uid}/${targetUid}`));
             const b2 = await get(ref(db, `blocks/${targetUid}/${currentUser.uid}`));
             if (b1.exists() || b2.exists()) {
@@ -690,7 +702,7 @@
                         const chatId = child.key;
                         const chatData = child.val();
                         
-                        if (chatId.includes(currentUser.uid)) {
+                        if (chatId.includes(currentUser.uid) && chatData && chatData.active) {
                             hasChats = true;
                             const otherUid = chatId.replace(currentUser.uid, "").replace("_", "");
                             
