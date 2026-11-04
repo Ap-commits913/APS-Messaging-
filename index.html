@@ -223,8 +223,11 @@
                         <div class="flex items-center gap-3">
                             <h4 id="cw-target-name" class="font-bold text-sm text-gray-100">Select Chat</h4>
                         </div>
-                        <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2">
                             <span id="cw-target-status" class="text-xs text-emerald-400 font-semibold hidden sm:inline">Active Secure Channel</span>
+                            <button id="unfriend-chat-btn" onclick="unfriendActiveChat()" class="px-3 py-1 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-all hidden">
+                                <i class="fa-solid fa-user-minus mr-1"></i> Unfriend
+                            </button>
                             <button id="block-user-btn" onclick="toggleBlockActiveUser()" class="px-3 py-1 rounded-lg text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-all">
                                 <i class="fa-solid fa-ban mr-1"></i> Block
                             </button>
@@ -258,7 +261,7 @@
                     <p class="text-xs text-gray-400 mt-0.5">Manage your personal details, bio, avatar, and blocked users.</p>
                 </div>
 
-                <!-- Personal Info Card (Private details visible only to self) -->
+                <!-- Personal Info Card -->
                 <div class="bg-brand-panel p-6 rounded-3xl border border-brand-border shadow-xl space-y-6">
                     <div class="flex flex-col sm:flex-row items-center gap-6">
                         <div class="relative group">
@@ -518,7 +521,21 @@
             }
 
             const targetUid = idSnap.val();
+
+            // Check if blocked mutually or individually
+            const blockCheck1 = await get(ref(db, `blocks/${currentUser.uid}/${targetUid}`));
+            const blockCheck2 = await get(ref(db, `blocks/${targetUid}/${currentUser.uid}`));
+            if (blockCheck1.exists() || blockCheck2.exists()) {
+                alert("User not found.");
+                card.classList.add("hidden");
+                return;
+            }
+
             const targetSnap = await get(ref(db, `users/${targetUid}`));
+            if (!targetSnap.exists()) {
+                card.classList.add("hidden");
+                return;
+            }
             const targetUser = targetSnap.val();
 
             card.classList.remove("hidden");
@@ -534,30 +551,58 @@
             document.getElementById("sr-id").innerText = `@${targetUser.idName}`;
             document.getElementById("sr-privacy").innerText = `${targetUser.privacy} ACCOUNT`;
 
+            // Bio Visibility check
             const bioElem = document.getElementById("sr-bio");
-            if (targetUser.privacy === "PUBLIC") {
+            const chatId = [currentUser.uid, targetUid].sort().join("_");
+            const chatSnap = await get(ref(db, `chats/${chatId}`));
+
+            if (targetUser.privacy === "PUBLIC" || chatSnap.exists()) {
                 bioElem.innerText = targetUser.bio || "No bio available.";
             } else {
-                const chatId1 = [currentUser.uid, targetUid].sort().join("_");
-                const chatSnap = await get(ref(db, `chats/${chatId1}`));
-                if (chatSnap.exists()) {
-                    bioElem.innerText = targetUser.bio || "No bio available.";
-                } else {
-                    bioElem.innerText = "🔒 Bio hidden (Private Account - Friends Only)";
-                }
+                bioElem.innerText = "🔒 Bio hidden (Private Account - Friends Only)";
+            }
+
+            // Check existing pending requests (either sent by me or received by me)
+            const reqsToMeSnap = await get(ref(db, `requests/${currentUser.uid}`));
+            const reqsFromMeSnap = await get(ref(db, `requests/${targetUid}`));
+
+            let hasPendingRequest = false;
+            if (reqsToMeSnap.exists()) {
+                reqsToMeSnap.forEach(child => {
+                    if (child.val().senderUid === targetUid && child.val().status === 'PENDING') hasPendingRequest = true;
+                });
+            }
+            if (reqsFromMeSnap.exists()) {
+                reqsFromMeSnap.forEach(child => {
+                    if (child.val().senderUid === currentUser.uid && child.val().status === 'PENDING') hasPendingRequest = true;
+                });
             }
 
             const actionContainer = document.getElementById("sr-action-container");
             actionContainer.innerHTML = "";
 
-            if (targetUser.privacy === "PUBLIC") {
-                actionContainer.innerHTML = `<button onclick="sendRequest('${targetUid}', 'FRIEND')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-md"><i class="fa-solid fa-user-plus mr-1"></i> Send Friend Request</button>`;
+            if (chatSnap.exists()) {
+                actionContainer.innerHTML = `<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-semibold px-4 py-2.5 rounded-xl"><i class="fa-solid fa-user-check mr-1"></i> Friends / Connected</span>`;
+            } else if (hasPendingRequest) {
+                actionContainer.innerHTML = `<span class="bg-amber-500/10 text-amber-400 border border-amber-500/30 text-xs font-semibold px-4 py-2.5 rounded-xl"><i class="fa-solid fa-clock mr-1"></i> Request Pending</span>`;
             } else {
-                actionContainer.innerHTML = `<button onclick="sendRequest('${targetUid}', 'MESSAGE')" class="bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-md"><i class="fa-solid fa-paper-plane mr-1"></i> Send Message Request</button>`;
+                if (targetUser.privacy === "PUBLIC") {
+                    actionContainer.innerHTML = `<button onclick="sendRequest('${targetUid}', 'FRIEND')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-md"><i class="fa-solid fa-user-plus mr-1"></i> Send Friend Request</button>`;
+                } else {
+                    actionContainer.innerHTML = `<button onclick="sendRequest('${targetUid}', 'MESSAGE')" class="bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-md"><i class="fa-solid fa-paper-plane mr-1"></i> Send Message Request</button>`;
+                }
             }
         }
 
         window.sendRequest = async function(targetUid, type) {
+            // Double check block status
+            const b1 = await get(ref(db, `blocks/${currentUser.uid}/${targetUid}`));
+            const b2 = await get(ref(db, `blocks/${targetUid}/${currentUser.uid}`));
+            if (b1.exists() || b2.exists()) {
+                alert("Cannot send request to this user.");
+                return;
+            }
+
             const reqRef = push(ref(db, `requests/${targetUid}`));
             await set(reqRef, {
                 senderUid: currentUser.uid,
@@ -568,6 +613,7 @@
                 timestamp: Date.now()
             });
             alert(`${type === 'FRIEND' ? 'Friend' : 'Message'} Request Sent Successfully!`);
+            executeRealtimeSearch();
         }
 
         function listenToIncomingRequests() {
@@ -607,7 +653,6 @@
         window.respondRequest = async function(reqKey, senderUid, type, action) {
             if (action === 'ACCEPT') {
                 const chatId = [currentUser.uid, senderUid].sort().join("_");
-                // Properly initialize chat mapping for both participants
                 await set(ref(db, `chats/${chatId}`), { 
                     active: true, 
                     type: type,
@@ -615,19 +660,16 @@
                     user2: senderUid,
                     lastUpdated: Date.now()
                 });
-                // Remove request after acceptance
                 await remove(ref(db, `requests/${currentUser.uid}/${reqKey}`));
                 alert("Request accepted! Chat created.");
                 setActiveTab('chats');
             } else if (action === 'DELETE') {
-                // Delete request completely so sender can send again
                 await remove(ref(db, `requests/${currentUser.uid}/${reqKey}`));
                 alert("Request deleted.");
             }
         }
 
         window.blockUserFromRequest = async function(senderUid, reqKey) {
-            // Block user and remove request
             await set(ref(db, `blocks/${currentUser.uid}/${senderUid}`), true);
             await remove(ref(db, `requests/${currentUser.uid}/${reqKey}`));
             alert("User blocked and request removed.");
@@ -647,6 +689,7 @@
                     snapshot.forEach((child) => {
                         const chatId = child.key;
                         const chatData = child.val();
+                        
                         if (chatId.includes(currentUser.uid)) {
                             hasChats = true;
                             const otherUid = chatId.replace(currentUser.uid, "").replace("_", "");
@@ -692,6 +735,7 @@
             document.getElementById("chat-empty-placeholder").classList.add("hidden");
             document.getElementById("chat-workspace").classList.remove("hidden");
             document.getElementById("cw-target-name").innerText = targetName;
+            document.getElementById("unfriend-chat-btn").classList.remove("hidden");
             loadMessages(chatId);
         }
 
@@ -723,9 +767,9 @@
             const text = input.value.trim();
             if (!text || !activeChatId) return;
 
-            // Check if blocked before sending
             const blockSnap = await get(ref(db, `blocks/${activeChatUserId}/${currentUser.uid}`));
-            if (blockSnap.exists()) {
+            const blockSnap2 = await get(ref(db, `blocks/${currentUser.uid}/${activeChatUserId}`));
+            if (blockSnap.exists() || blockSnap2.exists()) {
                 alert("You cannot send messages to this user.");
                 return;
             }
@@ -738,6 +782,17 @@
             input.value = "";
         }
 
+        window.unfriendActiveChat = async function() {
+            if (!activeChatId) return;
+            if (confirm("Are you sure you want to unfriend this user?")) {
+                await remove(ref(db, `chats/${activeChatId}`));
+                document.getElementById("chat-workspace").classList.add("hidden");
+                document.getElementById("chat-empty-placeholder").classList.remove("hidden");
+                document.getElementById("unfriend-chat-btn").classList.add("hidden");
+                alert("Unfriended successfully.");
+            }
+        }
+
         window.toggleBlockActiveUser = async function() {
             if (!activeChatUserId) return;
             const blockRef = ref(db, `blocks/${currentUser.uid}/${activeChatUserId}`);
@@ -747,7 +802,13 @@
                 alert("User unblocked successfully.");
             } else {
                 await set(blockRef, true);
+                if (activeChatId) {
+                    await remove(ref(db, `chats/${activeChatId}`));
+                }
                 alert("User blocked successfully.");
+                document.getElementById("chat-workspace").classList.add("hidden");
+                document.getElementById("chat-empty-placeholder").classList.remove("hidden");
+                document.getElementById("unfriend-chat-btn").classList.add("hidden");
             }
             loadBlockedUsersList();
         }
